@@ -1,0 +1,6 @@
+# 忽略所有 safetensors、gguf 和 pt 模型文件
+*.safetensors
+*.gguf
+*.pt
+
+# 允许其他所有文件（默认就是允许）

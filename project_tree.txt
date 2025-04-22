@@ -1,0 +1,1880 @@
+.
+├── project_tree.txt
+├── README.md
+└── unsloth
+    ├── environment.yml
+    ├── Llama3_1_8B_Alpaca.ipynb
+    ├── llama3_1_8b_alpaca.py
+    ├── Llama3_2_(1B_and_3B)_Conversational_bkp.ipynb
+    ├── llama3_2_1b_and_3b_conversational_bkp.py
+    ├── Llama3_2_(1B_and_3B)_Conversational.ipynb
+    ├── llama3_2_1b_and_3b_conversational.py
+    ├── llama.cpp
+    │   ├── AUTHORS
+    │   ├── build-xcframework.sh
+    │   ├── ci
+    │   │   ├── README.md
+    │   │   └── run.sh
+    │   ├── cmake
+    │   │   ├── arm64-apple-clang.cmake
+    │   │   ├── arm64-windows-llvm.cmake
+    │   │   ├── arm64-windows-msvc.cmake
+    │   │   ├── build-info.cmake
+    │   │   ├── common.cmake
+    │   │   ├── git-vars.cmake
+    │   │   ├── llama-config.cmake.in
+    │   │   ├── llama.pc.in
+    │   │   └── x64-windows-llvm.cmake
+    │   ├── CMakeLists.txt
+    │   ├── CMakePresets.json
+    │   ├── CODEOWNERS
+    │   ├── common
+    │   │   ├── arg.cpp
+    │   │   ├── arg.h
+    │   │   ├── base64.hpp
+    │   │   ├── build-info.cpp
+    │   │   ├── build-info.cpp.in
+    │   │   ├── chat.cpp
+    │   │   ├── chat.h
+    │   │   ├── cmake
+    │   │   │   └── build-info-gen-cpp.cmake
+    │   │   ├── CMakeLists.txt
+    │   │   ├── common.cpp
+    │   │   ├── common.h
+    │   │   ├── console.cpp
+    │   │   ├── console.h
+    │   │   ├── json.hpp
+    │   │   ├── json-schema-to-grammar.cpp
+    │   │   ├── json-schema-to-grammar.h
+    │   │   ├── llguidance.cpp
+    │   │   ├── log.cpp
+    │   │   ├── log.h
+    │   │   ├── minja
+    │   │   │   ├── chat-template.hpp
+    │   │   │   └── minja.hpp
+    │   │   ├── ngram-cache.cpp
+    │   │   ├── ngram-cache.h
+    │   │   ├── sampling.cpp
+    │   │   ├── sampling.h
+    │   │   ├── speculative.cpp
+    │   │   ├── speculative.h
+    │   │   └── stb_image.h
+    │   ├── CONTRIBUTING.md
+    │   ├── convert_hf_to_gguf.py
+    │   ├── convert_hf_to_gguf_update.py
+    │   ├── convert_llama_ggml_to_gguf.py
+    │   ├── convert_lora_to_gguf.py
+    │   ├── docs
+    │   │   ├── android.md
+    │   │   ├── backend
+    │   │   │   ├── BLIS.md
+    │   │   │   ├── CANN.md
+    │   │   │   ├── CUDA-FEDORA.md
+    │   │   │   ├── OPENCL.md
+    │   │   │   └── SYCL.md
+    │   │   ├── build.md
+    │   │   ├── development
+    │   │   │   ├── debugging-tests.md
+    │   │   │   ├── HOWTO-add-model.md
+    │   │   │   ├── llama-star
+    │   │   │   │   ├── idea-arch.key
+    │   │   │   │   └── idea-arch.pdf
+    │   │   │   └── token_generation_performance_tips.md
+    │   │   ├── docker.md
+    │   │   ├── function-calling.md
+    │   │   ├── install.md
+    │   │   ├── llguidance.md
+    │   │   └── multimodal
+    │   │       ├── gemma3.md
+    │   │       ├── glmedge.md
+    │   │       ├── granitevision.md
+    │   │       ├── llava.md
+    │   │       ├── minicpmo2.6.md
+    │   │       ├── minicpmv2.5.md
+    │   │       ├── minicpmv2.6.md
+    │   │       └── MobileVLM.md
+    │   ├── examples
+    │   │   ├── batched
+    │   │   │   ├── batched.cpp
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── README.md
+    │   │   ├── batched-bench
+    │   │   │   ├── batched-bench.cpp
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── README.md
+    │   │   ├── batched.swift
+    │   │   │   ├── Makefile
+    │   │   │   ├── Package.swift
+    │   │   │   ├── README.md
+    │   │   │   └── Sources
+    │   │   │       └── main.swift
+    │   │   ├── chat-13B.bat
+    │   │   ├── chat-13B.sh
+    │   │   ├── chat-persistent.sh
+    │   │   ├── chat.sh
+    │   │   ├── chat-vicuna.sh
+    │   │   ├── CMakeLists.txt
+    │   │   ├── convert_legacy_llama.py
+    │   │   ├── convert-llama2c-to-ggml
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── convert-llama2c-to-ggml.cpp
+    │   │   │   └── README.md
+    │   │   ├── cvector-generator
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── completions.txt
+    │   │   │   ├── cvector-generator.cpp
+    │   │   │   ├── mean.hpp
+    │   │   │   ├── negative.txt
+    │   │   │   ├── pca.hpp
+    │   │   │   ├── positive.txt
+    │   │   │   └── README.md
+    │   │   ├── deprecation-warning
+    │   │   │   ├── deprecation-warning.cpp
+    │   │   │   └── README.md
+    │   │   ├── embedding
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── embedding.cpp
+    │   │   │   └── README.md
+    │   │   ├── eval-callback
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── eval-callback.cpp
+    │   │   │   └── README.md
+    │   │   ├── export-lora
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── export-lora.cpp
+    │   │   │   └── README.md
+    │   │   ├── gbnf-validator
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── gbnf-validator.cpp
+    │   │   ├── gen-docs
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── gen-docs.cpp
+    │   │   ├── gguf
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── gguf.cpp
+    │   │   ├── gguf-hash
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── deps
+    │   │   │   │   ├── rotate-bits
+    │   │   │   │   │   ├── package.json
+    │   │   │   │   │   └── rotate-bits.h
+    │   │   │   │   ├── sha1
+    │   │   │   │   │   ├── package.json
+    │   │   │   │   │   ├── sha1.c
+    │   │   │   │   │   └── sha1.h
+    │   │   │   │   ├── sha256
+    │   │   │   │   │   ├── package.json
+    │   │   │   │   │   ├── sha256.c
+    │   │   │   │   │   └── sha256.h
+    │   │   │   │   └── xxhash
+    │   │   │   │       ├── clib.json
+    │   │   │   │       ├── xxhash.c
+    │   │   │   │       └── xxhash.h
+    │   │   │   ├── gguf-hash.cpp
+    │   │   │   └── README.md
+    │   │   ├── gguf-split
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── gguf-split.cpp
+    │   │   │   ├── README.md
+    │   │   │   └── tests.sh
+    │   │   ├── gritlm
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── gritlm.cpp
+    │   │   │   └── README.md
+    │   │   ├── imatrix
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── imatrix.cpp
+    │   │   │   └── README.md
+    │   │   ├── infill
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── infill.cpp
+    │   │   │   └── README.md
+    │   │   ├── jeopardy
+    │   │   │   ├── graph.py
+    │   │   │   ├── jeopardy.sh
+    │   │   │   ├── qasheet.csv
+    │   │   │   ├── questions.txt
+    │   │   │   └── README.md
+    │   │   ├── json_schema_pydantic_example.py
+    │   │   ├── json_schema_to_grammar.py
+    │   │   ├── llama.android
+    │   │   │   ├── app
+    │   │   │   │   ├── build.gradle.kts
+    │   │   │   │   ├── proguard-rules.pro
+    │   │   │   │   └── src
+    │   │   │   │       └── main
+    │   │   │   │           ├── AndroidManifest.xml
+    │   │   │   │           ├── java
+    │   │   │   │           │   └── com
+    │   │   │   │           │       └── example
+    │   │   │   │           │           └── llama
+    │   │   │   │           │               ├── Downloadable.kt
+    │   │   │   │           │               ├── MainActivity.kt
+    │   │   │   │           │               ├── MainViewModel.kt
+    │   │   │   │           │               └── ui
+    │   │   │   │           │                   └── theme
+    │   │   │   │           │                       ├── Color.kt
+    │   │   │   │           │                       ├── Theme.kt
+    │   │   │   │           │                       └── Type.kt
+    │   │   │   │           └── res
+    │   │   │   │               ├── drawable
+    │   │   │   │               │   ├── ic_launcher_background.xml
+    │   │   │   │               │   └── ic_launcher_foreground.xml
+    │   │   │   │               ├── mipmap-anydpi
+    │   │   │   │               │   ├── ic_launcher_round.xml
+    │   │   │   │               │   └── ic_launcher.xml
+    │   │   │   │               ├── mipmap-hdpi
+    │   │   │   │               │   ├── ic_launcher_round.webp
+    │   │   │   │               │   └── ic_launcher.webp
+    │   │   │   │               ├── mipmap-mdpi
+    │   │   │   │               │   ├── ic_launcher_round.webp
+    │   │   │   │               │   └── ic_launcher.webp
+    │   │   │   │               ├── mipmap-xhdpi
+    │   │   │   │               │   ├── ic_launcher_round.webp
+    │   │   │   │               │   └── ic_launcher.webp
+    │   │   │   │               ├── mipmap-xxhdpi
+    │   │   │   │               │   ├── ic_launcher_round.webp
+    │   │   │   │               │   └── ic_launcher.webp
+    │   │   │   │               ├── mipmap-xxxhdpi
+    │   │   │   │               │   ├── ic_launcher_round.webp
+    │   │   │   │               │   └── ic_launcher.webp
+    │   │   │   │               ├── values
+    │   │   │   │               │   ├── colors.xml
+    │   │   │   │               │   ├── strings.xml
+    │   │   │   │               │   └── themes.xml
+    │   │   │   │               └── xml
+    │   │   │   │                   ├── backup_rules.xml
+    │   │   │   │                   └── data_extraction_rules.xml
+    │   │   │   ├── build.gradle.kts
+    │   │   │   ├── gradle
+    │   │   │   │   └── wrapper
+    │   │   │   │       ├── gradle-wrapper.jar
+    │   │   │   │       └── gradle-wrapper.properties
+    │   │   │   ├── gradle.properties
+    │   │   │   ├── gradlew
+    │   │   │   ├── llama
+    │   │   │   │   ├── build.gradle.kts
+    │   │   │   │   ├── consumer-rules.pro
+    │   │   │   │   ├── proguard-rules.pro
+    │   │   │   │   └── src
+    │   │   │   │       ├── androidTest
+    │   │   │   │       │   └── java
+    │   │   │   │       │       └── android
+    │   │   │   │       │           └── llama
+    │   │   │   │       │               └── cpp
+    │   │   │   │       │                   └── ExampleInstrumentedTest.kt
+    │   │   │   │       ├── main
+    │   │   │   │       │   ├── AndroidManifest.xml
+    │   │   │   │       │   ├── cpp
+    │   │   │   │       │   │   ├── CMakeLists.txt
+    │   │   │   │       │   │   └── llama-android.cpp
+    │   │   │   │       │   └── java
+    │   │   │   │       │       └── android
+    │   │   │   │       │           └── llama
+    │   │   │   │       │               └── cpp
+    │   │   │   │       │                   └── LLamaAndroid.kt
+    │   │   │   │       └── test
+    │   │   │   │           └── java
+    │   │   │   │               └── android
+    │   │   │   │                   └── llama
+    │   │   │   │                       └── cpp
+    │   │   │   │                           └── ExampleUnitTest.kt
+    │   │   │   ├── README.md
+    │   │   │   └── settings.gradle.kts
+    │   │   ├── llama-bench
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── llama-bench.cpp
+    │   │   │   └── README.md
+    │   │   ├── llama.swiftui
+    │   │   │   ├── llama.cpp.swift
+    │   │   │   │   └── LibLlama.swift
+    │   │   │   ├── llama.swiftui
+    │   │   │   │   ├── Assets.xcassets
+    │   │   │   │   │   ├── AppIcon.appiconset
+    │   │   │   │   │   │   └── Contents.json
+    │   │   │   │   │   └── Contents.json
+    │   │   │   │   ├── llama_swiftuiApp.swift
+    │   │   │   │   ├── Models
+    │   │   │   │   │   └── LlamaState.swift
+    │   │   │   │   ├── Resources
+    │   │   │   │   │   └── models
+    │   │   │   │   └── UI
+    │   │   │   │       ├── ContentView.swift
+    │   │   │   │       ├── DownloadButton.swift
+    │   │   │   │       ├── InputButton.swift
+    │   │   │   │       └── LoadCustomButton.swift
+    │   │   │   ├── llama.swiftui.xcodeproj
+    │   │   │   │   ├── project.pbxproj
+    │   │   │   │   └── project.xcworkspace
+    │   │   │   │       ├── contents.xcworkspacedata
+    │   │   │   │       └── xcshareddata
+    │   │   │   │           └── IDEWorkspaceChecks.plist
+    │   │   │   └── README.md
+    │   │   ├── llama.vim
+    │   │   ├── llava
+    │   │   │   ├── android
+    │   │   │   │   ├── adb_run.sh
+    │   │   │   │   └── build_64.sh
+    │   │   │   ├── clip.cpp
+    │   │   │   ├── clip.h
+    │   │   │   ├── clip-impl.h
+    │   │   │   ├── clip-quantize-cli.cpp
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── convert_image_encoder_to_gguf.py
+    │   │   │   ├── deprecation-warning.cpp
+    │   │   │   ├── glmedge-convert-image-encoder-to-gguf.py
+    │   │   │   ├── glmedge-surgery.py
+    │   │   │   ├── llava.cpp
+    │   │   │   ├── llava.h
+    │   │   │   ├── llava_surgery.py
+    │   │   │   ├── llava_surgery_v2.py
+    │   │   │   ├── minicpmv-convert-image-encoder-to-gguf.py
+    │   │   │   ├── minicpmv-surgery.py
+    │   │   │   ├── mtmd-cli.cpp
+    │   │   │   ├── mtmd.cpp
+    │   │   │   ├── mtmd.h
+    │   │   │   ├── qwen2vl-cli.cpp
+    │   │   │   ├── qwen2_vl_surgery.py
+    │   │   │   ├── README.md
+    │   │   │   ├── README-quantize.md
+    │   │   │   ├── requirements.txt
+    │   │   │   ├── test-1.jpeg
+    │   │   │   └── tests.sh
+    │   │   ├── llm.vim
+    │   │   ├── lookahead
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── lookahead.cpp
+    │   │   │   └── README.md
+    │   │   ├── lookup
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── lookup.cpp
+    │   │   │   ├── lookup-create.cpp
+    │   │   │   ├── lookup-merge.cpp
+    │   │   │   ├── lookup-stats.cpp
+    │   │   │   └── README.md
+    │   │   ├── main
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── main.cpp
+    │   │   │   └── README.md
+    │   │   ├── Miku.sh
+    │   │   ├── parallel
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── parallel.cpp
+    │   │   │   └── README.md
+    │   │   ├── passkey
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── passkey.cpp
+    │   │   │   └── README.md
+    │   │   ├── perplexity
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── perplexity.cpp
+    │   │   │   └── README.md
+    │   │   ├── pydantic_models_to_grammar_examples.py
+    │   │   ├── pydantic_models_to_grammar.py
+    │   │   ├── quantize
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── quantize.cpp
+    │   │   │   ├── README.md
+    │   │   │   └── tests.sh
+    │   │   ├── quantize-stats
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── quantize-stats.cpp
+    │   │   ├── reason-act.sh
+    │   │   ├── regex_to_grammar.py
+    │   │   ├── retrieval
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── retrieval.cpp
+    │   │   ├── rpc
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── rpc-server.cpp
+    │   │   ├── run
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── linenoise.cpp
+    │   │   │   │   ├── linenoise.cpp
+    │   │   │   │   └── linenoise.h
+    │   │   │   ├── README.md
+    │   │   │   └── run.cpp
+    │   │   ├── save-load-state
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── save-load-state.cpp
+    │   │   ├── server
+    │   │   │   ├── bench
+    │   │   │   │   ├── bench.py
+    │   │   │   │   ├── prometheus.yml
+    │   │   │   │   ├── README.md
+    │   │   │   │   ├── requirements.txt
+    │   │   │   │   └── script.js
+    │   │   │   ├── chat-llama2.sh
+    │   │   │   ├── chat.mjs
+    │   │   │   ├── chat.sh
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── httplib.h
+    │   │   │   ├── public
+    │   │   │   │   ├── index.html.gz
+    │   │   │   │   └── loading.html
+    │   │   │   ├── public_legacy
+    │   │   │   │   ├── colorthemes.css
+    │   │   │   │   ├── completion.js
+    │   │   │   │   ├── favicon.ico
+    │   │   │   │   ├── index.html
+    │   │   │   │   ├── index.js
+    │   │   │   │   ├── index-new.html
+    │   │   │   │   ├── json-schema-to-grammar.mjs
+    │   │   │   │   ├── loading.html
+    │   │   │   │   ├── prompt-formats.js
+    │   │   │   │   ├── style.css
+    │   │   │   │   ├── system-prompts.js
+    │   │   │   │   ├── theme-beeninorder.css
+    │   │   │   │   ├── theme-ketivah.css
+    │   │   │   │   ├── theme-mangotango.css
+    │   │   │   │   ├── theme-playground.css
+    │   │   │   │   ├── theme-polarnight.css
+    │   │   │   │   └── theme-snowstorm.css
+    │   │   │   ├── public_simplechat
+    │   │   │   │   ├── datautils.mjs
+    │   │   │   │   ├── index.html
+    │   │   │   │   ├── readme.md
+    │   │   │   │   ├── simplechat.css
+    │   │   │   │   ├── simplechat.js
+    │   │   │   │   ├── simplechat_screens.webp
+    │   │   │   │   └── ui.mjs
+    │   │   │   ├── README.md
+    │   │   │   ├── server.cpp
+    │   │   │   ├── tests
+    │   │   │   │   ├── conftest.py
+    │   │   │   │   ├── pytest.ini
+    │   │   │   │   ├── README.md
+    │   │   │   │   ├── requirements.txt
+    │   │   │   │   ├── tests.sh
+    │   │   │   │   ├── unit
+    │   │   │   │   │   ├── test_basic.py
+    │   │   │   │   │   ├── test_chat_completion.py
+    │   │   │   │   │   ├── test_completion.py
+    │   │   │   │   │   ├── test_ctx_shift.py
+    │   │   │   │   │   ├── test_embedding.py
+    │   │   │   │   │   ├── test_infill.py
+    │   │   │   │   │   ├── test_lora.py
+    │   │   │   │   │   ├── test_rerank.py
+    │   │   │   │   │   ├── test_security.py
+    │   │   │   │   │   ├── test_slot_save.py
+    │   │   │   │   │   ├── test_speculative.py
+    │   │   │   │   │   ├── test_tokenize.py
+    │   │   │   │   │   └── test_tool_call.py
+    │   │   │   │   └── utils.py
+    │   │   │   ├── themes
+    │   │   │   │   ├── buttons-top
+    │   │   │   │   │   ├── buttons_top.png
+    │   │   │   │   │   ├── favicon.ico
+    │   │   │   │   │   ├── index.html
+    │   │   │   │   │   └── README.md
+    │   │   │   │   ├── README.md
+    │   │   │   │   └── wild
+    │   │   │   │       ├── favicon.ico
+    │   │   │   │       ├── index.html
+    │   │   │   │       ├── llama_cpp.png
+    │   │   │   │       ├── llamapattern.png
+    │   │   │   │       ├── README.md
+    │   │   │   │       └── wild.png
+    │   │   │   ├── utils.hpp
+    │   │   │   └── webui
+    │   │   │       ├── eslint.config.js
+    │   │   │       ├── index.html
+    │   │   │       ├── package.json
+    │   │   │       ├── package-lock.json
+    │   │   │       ├── postcss.config.js
+    │   │   │       ├── public
+    │   │   │       │   └── demo-conversation.json
+    │   │   │       ├── src
+    │   │   │       │   ├── App.tsx
+    │   │   │       │   ├── components
+    │   │   │       │   │   ├── CanvasPyInterpreter.tsx
+    │   │   │       │   │   ├── ChatMessage.tsx
+    │   │   │       │   │   ├── ChatScreen.tsx
+    │   │   │       │   │   ├── Header.tsx
+    │   │   │       │   │   ├── MarkdownDisplay.tsx
+    │   │   │       │   │   ├── SettingDialog.tsx
+    │   │   │       │   │   ├── Sidebar.tsx
+    │   │   │       │   │   └── useChatTextarea.ts
+    │   │   │       │   ├── Config.ts
+    │   │   │       │   ├── index.scss
+    │   │   │       │   ├── main.tsx
+    │   │   │       │   ├── utils
+    │   │   │       │   │   ├── app.context.tsx
+    │   │   │       │   │   ├── common.tsx
+    │   │   │       │   │   ├── llama-vscode.ts
+    │   │   │       │   │   ├── misc.ts
+    │   │   │       │   │   ├── storage.ts
+    │   │   │       │   │   └── types.ts
+    │   │   │       │   └── vite-env.d.ts
+    │   │   │       ├── tailwind.config.js
+    │   │   │       ├── tsconfig.app.json
+    │   │   │       ├── tsconfig.json
+    │   │   │       ├── tsconfig.node.json
+    │   │   │       └── vite.config.ts
+    │   │   ├── server_embd.py
+    │   │   ├── server-llama2-13B.sh
+    │   │   ├── simple
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── simple.cpp
+    │   │   ├── simple-chat
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── simple-chat.cpp
+    │   │   ├── simple-cmake-pkg
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── README.md
+    │   │   ├── speculative
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── speculative.cpp
+    │   │   ├── speculative-simple
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── README.md
+    │   │   │   └── speculative-simple.cpp
+    │   │   ├── sycl
+    │   │   │   ├── build.sh
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   ├── ls-sycl-device.cpp
+    │   │   │   ├── README.md
+    │   │   │   ├── run-llama2.sh
+    │   │   │   ├── win-build-sycl.bat
+    │   │   │   └── win-run-llama2.bat
+    │   │   ├── tokenize
+    │   │   │   ├── CMakeLists.txt
+    │   │   │   └── tokenize.cpp
+    │   │   ├── ts-type-to-grammar.sh
+    │   │   └── tts
+    │   │       ├── CMakeLists.txt
+    │   │       ├── convert_pt_to_hf.py
+    │   │       ├── README.md
+    │   │       ├── tts.cpp
+    │   │       └── tts-outetts.py
+    │   ├── flake.lock
+    │   ├── flake.nix
+    │   ├── ggml
+    │   │   ├── cmake
+    │   │   │   ├── common.cmake
+    │   │   │   ├── ggml-config.cmake.in
+    │   │   │   └── GitVars.cmake
+    │   │   ├── CMakeLists.txt
+    │   │   ├── include
+    │   │   │   ├── ggml-alloc.h
+    │   │   │   ├── ggml-backend.h
+    │   │   │   ├── ggml-blas.h
+    │   │   │   ├── ggml-cann.h
+    │   │   │   ├── ggml-cpp.h
+    │   │   │   ├── ggml-cpu.h
+    │   │   │   ├── ggml-cuda.h
+    │   │   │   ├── ggml.h
+    │   │   │   ├── ggml-kompute.h
+    │   │   │   ├── ggml-metal.h
+    │   │   │   ├── ggml-opencl.h
+    │   │   │   ├── ggml-opt.h
+    │   │   │   ├── ggml-rpc.h
+    │   │   │   ├── ggml-sycl.h
+    │   │   │   ├── ggml-vulkan.h
+    │   │   │   └── gguf.h
+    │   │   └── src
+    │   │       ├── CMakeLists.txt
+    │   │       ├── ggml-alloc.c
+    │   │       ├── ggml-backend.cpp
+    │   │       ├── ggml-backend-impl.h
+    │   │       ├── ggml-backend-reg.cpp
+    │   │       ├── ggml-blas
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   └── ggml-blas.cpp
+    │   │       ├── ggml.c
+    │   │       ├── ggml-cann
+    │   │       │   ├── aclnn_ops.cpp
+    │   │       │   ├── aclnn_ops.h
+    │   │       │   ├── acl_tensor.cpp
+    │   │       │   ├── acl_tensor.h
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── common.h
+    │   │       │   ├── Doxyfile
+    │   │       │   └── ggml-cann.cpp
+    │   │       ├── ggml-common.h
+    │   │       ├── ggml-cpu
+    │   │       │   ├── amx
+    │   │       │   │   ├── amx.cpp
+    │   │       │   │   ├── amx.h
+    │   │       │   │   ├── common.h
+    │   │       │   │   ├── mmq.cpp
+    │   │       │   │   └── mmq.h
+    │   │       │   ├── binary-ops.cpp
+    │   │       │   ├── binary-ops.h
+    │   │       │   ├── cmake
+    │   │       │   │   └── FindSIMD.cmake
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── common.h
+    │   │       │   ├── cpu-feats-x86.cpp
+    │   │       │   ├── ggml-cpu-aarch64.cpp
+    │   │       │   ├── ggml-cpu-aarch64.h
+    │   │       │   ├── ggml-cpu.c
+    │   │       │   ├── ggml-cpu.cpp
+    │   │       │   ├── ggml-cpu-hbm.cpp
+    │   │       │   ├── ggml-cpu-hbm.h
+    │   │       │   ├── ggml-cpu-impl.h
+    │   │       │   ├── ggml-cpu-quants.c
+    │   │       │   ├── ggml-cpu-quants.h
+    │   │       │   ├── ggml-cpu-traits.cpp
+    │   │       │   ├── ggml-cpu-traits.h
+    │   │       │   ├── kleidiai
+    │   │       │   │   ├── kernels.cpp
+    │   │       │   │   ├── kernels.h
+    │   │       │   │   ├── kleidiai.cpp
+    │   │       │   │   └── kleidiai.h
+    │   │       │   ├── llamafile
+    │   │       │   │   ├── sgemm.cpp
+    │   │       │   │   └── sgemm.h
+    │   │       │   ├── ops.cpp
+    │   │       │   ├── ops.h
+    │   │       │   ├── simd-mappings.h
+    │   │       │   ├── unary-ops.cpp
+    │   │       │   ├── unary-ops.h
+    │   │       │   ├── vec.cpp
+    │   │       │   └── vec.h
+    │   │       ├── ggml-cuda
+    │   │       │   ├── acc.cu
+    │   │       │   ├── acc.cuh
+    │   │       │   ├── arange.cu
+    │   │       │   ├── arange.cuh
+    │   │       │   ├── argmax.cu
+    │   │       │   ├── argmax.cuh
+    │   │       │   ├── argsort.cu
+    │   │       │   ├── argsort.cuh
+    │   │       │   ├── binbcast.cu
+    │   │       │   ├── binbcast.cuh
+    │   │       │   ├── clamp.cu
+    │   │       │   ├── clamp.cuh
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── common.cuh
+    │   │       │   ├── concat.cu
+    │   │       │   ├── concat.cuh
+    │   │       │   ├── convert.cu
+    │   │       │   ├── convert.cuh
+    │   │       │   ├── conv-transpose-1d.cu
+    │   │       │   ├── conv-transpose-1d.cuh
+    │   │       │   ├── count-equal.cu
+    │   │       │   ├── count-equal.cuh
+    │   │       │   ├── cp-async.cuh
+    │   │       │   ├── cpy.cu
+    │   │       │   ├── cpy.cuh
+    │   │       │   ├── cross-entropy-loss.cu
+    │   │       │   ├── cross-entropy-loss.cuh
+    │   │       │   ├── dequantize.cuh
+    │   │       │   ├── diagmask.cu
+    │   │       │   ├── diagmask.cuh
+    │   │       │   ├── fattn-common.cuh
+    │   │       │   ├── fattn.cu
+    │   │       │   ├── fattn.cuh
+    │   │       │   ├── fattn-mma-f16.cuh
+    │   │       │   ├── fattn-tile-f16.cu
+    │   │       │   ├── fattn-tile-f16.cuh
+    │   │       │   ├── fattn-tile-f32.cu
+    │   │       │   ├── fattn-tile-f32.cuh
+    │   │       │   ├── fattn-vec-f16.cuh
+    │   │       │   ├── fattn-vec-f32.cuh
+    │   │       │   ├── fattn-wmma-f16.cu
+    │   │       │   ├── fattn-wmma-f16.cuh
+    │   │       │   ├── getrows.cu
+    │   │       │   ├── getrows.cuh
+    │   │       │   ├── ggml-cuda.cu
+    │   │       │   ├── gla.cu
+    │   │       │   ├── gla.cuh
+    │   │       │   ├── im2col.cu
+    │   │       │   ├── im2col.cuh
+    │   │       │   ├── mma.cuh
+    │   │       │   ├── mmq.cu
+    │   │       │   ├── mmq.cuh
+    │   │       │   ├── mmv.cu
+    │   │       │   ├── mmv.cuh
+    │   │       │   ├── mmvq.cu
+    │   │       │   ├── mmvq.cuh
+    │   │       │   ├── norm.cu
+    │   │       │   ├── norm.cuh
+    │   │       │   ├── opt-step-adamw.cu
+    │   │       │   ├── opt-step-adamw.cuh
+    │   │       │   ├── out-prod.cu
+    │   │       │   ├── out-prod.cuh
+    │   │       │   ├── pad.cu
+    │   │       │   ├── pad.cuh
+    │   │       │   ├── pool2d.cu
+    │   │       │   ├── pool2d.cuh
+    │   │       │   ├── quantize.cu
+    │   │       │   ├── quantize.cuh
+    │   │       │   ├── rope.cu
+    │   │       │   ├── rope.cuh
+    │   │       │   ├── scale.cu
+    │   │       │   ├── scale.cuh
+    │   │       │   ├── softmax.cu
+    │   │       │   ├── softmax.cuh
+    │   │       │   ├── ssm-conv.cu
+    │   │       │   ├── ssm-conv.cuh
+    │   │       │   ├── ssm-scan.cu
+    │   │       │   ├── ssm-scan.cuh
+    │   │       │   ├── sum.cu
+    │   │       │   ├── sum.cuh
+    │   │       │   ├── sumrows.cu
+    │   │       │   ├── sumrows.cuh
+    │   │       │   ├── template-instances
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_16-ncols2_1.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_16-ncols2_2.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_16-ncols2_4.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_1-ncols2_8.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_2-ncols2_4.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_2-ncols2_8.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_32-ncols2_1.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_32-ncols2_2.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_4-ncols2_2.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_4-ncols2_4.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_4-ncols2_8.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_64-ncols2_1.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_8-ncols2_1.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_8-ncols2_2.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_8-ncols2_4.cu
+    │   │       │   │   ├── fattn-mma-f16-instance-ncols1_8-ncols2_8.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-f16-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q4_1-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q5_1-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs128-q8_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs256-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f16-instance-hs64-f16-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-f16-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q4_1-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q5_1-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs128-q8_0-q8_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs256-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-f16.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-q4_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-q4_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-q5_0.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-q5_1.cu
+    │   │       │   │   ├── fattn-vec-f32-instance-hs64-f16-q8_0.cu
+    │   │       │   │   ├── generate_cu_files.py
+    │   │       │   │   ├── mmq-instance-iq1_s.cu
+    │   │       │   │   ├── mmq-instance-iq2_s.cu
+    │   │       │   │   ├── mmq-instance-iq2_xs.cu
+    │   │       │   │   ├── mmq-instance-iq2_xxs.cu
+    │   │       │   │   ├── mmq-instance-iq3_s.cu
+    │   │       │   │   ├── mmq-instance-iq3_xxs.cu
+    │   │       │   │   ├── mmq-instance-iq4_nl.cu
+    │   │       │   │   ├── mmq-instance-iq4_xs.cu
+    │   │       │   │   ├── mmq-instance-q2_k.cu
+    │   │       │   │   ├── mmq-instance-q3_k.cu
+    │   │       │   │   ├── mmq-instance-q4_0.cu
+    │   │       │   │   ├── mmq-instance-q4_1.cu
+    │   │       │   │   ├── mmq-instance-q4_k.cu
+    │   │       │   │   ├── mmq-instance-q5_0.cu
+    │   │       │   │   ├── mmq-instance-q5_1.cu
+    │   │       │   │   ├── mmq-instance-q5_k.cu
+    │   │       │   │   ├── mmq-instance-q6_k.cu
+    │   │       │   │   └── mmq-instance-q8_0.cu
+    │   │       │   ├── tsembd.cu
+    │   │       │   ├── tsembd.cuh
+    │   │       │   ├── unary.cu
+    │   │       │   ├── unary.cuh
+    │   │       │   ├── upscale.cu
+    │   │       │   ├── upscale.cuh
+    │   │       │   ├── vecdotq.cuh
+    │   │       │   ├── vendors
+    │   │       │   │   ├── cuda.h
+    │   │       │   │   ├── hip.h
+    │   │       │   │   └── musa.h
+    │   │       │   ├── wkv.cu
+    │   │       │   └── wkv.cuh
+    │   │       ├── ggml-hip
+    │   │       │   └── CMakeLists.txt
+    │   │       ├── ggml-impl.h
+    │   │       ├── ggml-kompute
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── ggml-kompute.cpp
+    │   │       │   ├── kompute
+    │   │       │   │   ├── CHANGELOG.md
+    │   │       │   │   ├── cmake
+    │   │       │   │   │   ├── bin2h.cmake
+    │   │       │   │   │   ├── bin_file_to_header.cmake
+    │   │       │   │   │   ├── check_vulkan_version.cmake
+    │   │       │   │   │   ├── code_coverage.cmake
+    │   │       │   │   │   ├── deprecation_warnings.cmake
+    │   │       │   │   │   ├── komputeConfig.cmake.in
+    │   │       │   │   │   └── vulkan_shader_compiler.cmake
+    │   │       │   │   ├── CMakeLists.txt
+    │   │       │   │   ├── CNAME
+    │   │       │   │   ├── CODE_OF_CONDUCT.md
+    │   │       │   │   ├── config
+    │   │       │   │   │   └── FindSphinx.cmake
+    │   │       │   │   ├── CONTRIBUTING.md
+    │   │       │   │   ├── docker-builders
+    │   │       │   │   │   ├── KomputeBuilder.Dockerfile
+    │   │       │   │   │   ├── Makefile
+    │   │       │   │   │   ├── Swiftshader.Dockerfile
+    │   │       │   │   │   └── VulkanSDK.Dockerfile
+    │   │       │   │   ├── Dockerfile
+    │   │       │   │   ├── docs
+    │   │       │   │   │   ├── assets
+    │   │       │   │   │   │   ├── custom.css
+    │   │       │   │   │   │   └── gcov.css
+    │   │       │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   ├── conf.py
+    │   │       │   │   │   ├── Doxyfile.in
+    │   │       │   │   │   ├── genindex.rst
+    │   │       │   │   │   ├── images
+    │   │       │   │   │   │   ├── android-editor.jpg
+    │   │       │   │   │   │   ├── android-kompute.jpg
+    │   │       │   │   │   │   ├── binder-cpp.jpg
+    │   │       │   │   │   │   ├── binder-python.jpg
+    │   │       │   │   │   │   ├── kompute-architecture.jpg
+    │   │       │   │   │   │   ├── kompute-cpp-video.png
+    │   │       │   │   │   │   ├── kompute.jpg
+    │   │       │   │   │   │   ├── kompute-python-video.png
+    │   │       │   │   │   │   ├── komputer-2.gif
+    │   │       │   │   │   │   ├── komputer-godot-4.gif
+    │   │       │   │   │   │   ├── komputer-logos.gif
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-algorithm.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-manager.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-opcreatetensor.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-operations.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-opmult.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-sequence.jpg
+    │   │       │   │   │   │   ├── kompute-vulkan-architecture-tensor.jpg
+    │   │       │   │   │   │   ├── logistic-regression.jpg
+    │   │       │   │   │   │   ├── queue-allocation.jpg
+    │   │       │   │   │   │   └── suspicious.jfif
+    │   │       │   │   │   ├── index.rst
+    │   │       │   │   │   ├── make.bat
+    │   │       │   │   │   ├── Makefile
+    │   │       │   │   │   └── overview
+    │   │       │   │   │       ├── advanced-examples.rst
+    │   │       │   │   │       ├── async-parallel.rst
+    │   │       │   │   │       ├── build-system.rst
+    │   │       │   │   │       ├── ci-tests.rst
+    │   │       │   │   │       ├── community.rst
+    │   │       │   │   │       ├── convolutional-net.rst
+    │   │       │   │   │       ├── custom-operations.rst
+    │   │       │   │   │       ├── game-engine-godot.rst
+    │   │       │   │   │       ├── matmul-benchmark.rst
+    │   │       │   │   │       ├── memory-management.rst
+    │   │       │   │   │       ├── mobile-android.rst
+    │   │       │   │   │       ├── python-examples.rst
+    │   │       │   │   │       ├── python-package.rst
+    │   │       │   │   │       ├── python-reference.rst
+    │   │       │   │   │       ├── raspberry-pi.rst
+    │   │       │   │   │       ├── reference.rst
+    │   │       │   │   │       ├── shaders-to-headers.rst
+    │   │       │   │   │       └── variable-types.rst
+    │   │       │   │   ├── examples
+    │   │       │   │   │   ├── android
+    │   │       │   │   │   │   └── android-simple
+    │   │       │   │   │   │       ├── app
+    │   │       │   │   │   │       │   ├── build.gradle
+    │   │       │   │   │   │       │   ├── proguard-rules.pro
+    │   │       │   │   │   │       │   └── src
+    │   │       │   │   │   │       │       └── main
+    │   │       │   │   │   │       │           ├── AndroidManifest.xml
+    │   │       │   │   │   │       │           ├── assets
+    │   │       │   │   │   │       │           │   ├── kompute.jpg
+    │   │       │   │   │   │       │           │   └── komputer-2.gif
+    │   │       │   │   │   │       │           ├── cpp
+    │   │       │   │   │   │       │           │   ├── CMakeLists.txt
+    │   │       │   │   │   │       │           │   ├── KomputeJniNative.cpp
+    │   │       │   │   │   │       │           │   ├── KomputeModelML.cpp
+    │   │       │   │   │   │       │           │   ├── KomputeModelML.hpp
+    │   │       │   │   │   │       │           │   └── shader
+    │   │       │   │   │   │       │           │       ├── CMakeLists.txt
+    │   │       │   │   │   │       │           │       └── my_shader.comp
+    │   │       │   │   │   │       │           ├── java
+    │   │       │   │   │   │       │           │   └── com
+    │   │       │   │   │   │       │           │       └── ethicalml
+    │   │       │   │   │   │       │           │           └── kompute
+    │   │       │   │   │   │       │           │               └── KomputeJni.kt
+    │   │       │   │   │   │       │           └── res
+    │   │       │   │   │   │       │               ├── layout
+    │   │       │   │   │   │       │               │   └── activity_kompute_jni.xml
+    │   │       │   │   │   │       │               ├── mipmap-anydpi-v26
+    │   │       │   │   │   │       │               │   └── kompute_icon.xml
+    │   │       │   │   │   │       │               ├── mipmap-hdpi
+    │   │       │   │   │   │       │               │   └── ic_launcher.png
+    │   │       │   │   │   │       │               ├── mipmap-mdpi
+    │   │       │   │   │   │       │               │   └── ic_launcher.png
+    │   │       │   │   │   │       │               ├── mipmap-xhdpi
+    │   │       │   │   │   │       │               │   ├── ic_launcher.png
+    │   │       │   │   │   │       │               │   ├── kompute_icon_foreground.png
+    │   │       │   │   │   │       │               │   └── kompute_icon.png
+    │   │       │   │   │   │       │               ├── mipmap-xxhdpi
+    │   │       │   │   │   │       │               │   └── ic_launcher.png
+    │   │       │   │   │   │       │               ├── mipmap-xxxhdpi
+    │   │       │   │   │   │       │               │   └── ic_launcher.png
+    │   │       │   │   │   │       │               ├── values
+    │   │       │   │   │   │       │               │   ├── colors.xml
+    │   │       │   │   │   │       │               │   ├── dimens.xml
+    │   │       │   │   │   │       │               │   ├── kompute_icon_background.xml
+    │   │       │   │   │   │       │               │   ├── strings.xml
+    │   │       │   │   │   │       │               │   └── styles.xml
+    │   │       │   │   │   │       │               └── values-w820dp
+    │   │       │   │   │   │       │                   └── dimens.xml
+    │   │       │   │   │   │       ├── build.gradle
+    │   │       │   │   │   │       ├── gradle
+    │   │       │   │   │   │       │   └── wrapper
+    │   │       │   │   │   │       │       └── gradle-wrapper.properties
+    │   │       │   │   │   │       ├── gradle.properties
+    │   │       │   │   │   │       ├── gradlew
+    │   │       │   │   │   │       ├── gradlew.bat
+    │   │       │   │   │   │       ├── README.md
+    │   │       │   │   │   │       └── settings.gradle
+    │   │       │   │   │   ├── array_multiplication
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   ├── README.md
+    │   │       │   │   │   │   ├── shader
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   └── my_shader.comp
+    │   │       │   │   │   │   └── src
+    │   │       │   │   │   │       ├── CMakeLists.txt
+    │   │       │   │   │   │       └── main.cpp
+    │   │       │   │   │   ├── godot_examples
+    │   │       │   │   │   │   ├── custom_module
+    │   │       │   │   │   │   │   ├── kompute_summator
+    │   │       │   │   │   │   │   │   ├── config.py
+    │   │       │   │   │   │   │   │   ├── include
+    │   │       │   │   │   │   │   │   ├── KomputeSummatorNode.cpp
+    │   │       │   │   │   │   │   │   ├── KomputeSummatorNode.h
+    │   │       │   │   │   │   │   │   ├── register_types.cpp
+    │   │       │   │   │   │   │   │   ├── register_types.h
+    │   │       │   │   │   │   │   │   └── SCsub
+    │   │       │   │   │   │   │   └── README.md
+    │   │       │   │   │   │   ├── gdnative_shared
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   ├── README.md
+    │   │       │   │   │   │   │   └── src
+    │   │       │   │   │   │   │       ├── KomputeGdNative.cpp
+    │   │       │   │   │   │   │       ├── KomputeSummator.cpp
+    │   │       │   │   │   │   │       └── KomputeSummator.hpp
+    │   │       │   │   │   │   ├── godot_engine
+    │   │       │   │   │   │   ├── godot_resources
+    │   │       │   │   │   │   │   ├── assets
+    │   │       │   │   │   │   │   │   ├── CustomModuleExampleScene.tscn
+    │   │       │   │   │   │   │   │   ├── default_env.tres
+    │   │       │   │   │   │   │   │   ├── DynamicExampleScene.tscn
+    │   │       │   │   │   │   │   │   ├── icon.png
+    │   │       │   │   │   │   │   │   └── icon.png.import
+    │   │       │   │   │   │   │   └── scripts
+    │   │       │   │   │   │   │       ├── CustomModuleExampleScene.gd
+    │   │       │   │   │   │   │       ├── DynamicExampleScript.gd
+    │   │       │   │   │   │   │       ├── KomputeNativeClass.gdns
+    │   │       │   │   │   │   │       └── KomputeNativeLibrary.gdnlib
+    │   │       │   │   │   │   ├── project.godot
+    │   │       │   │   │   │   └── README.md
+    │   │       │   │   │   ├── godot_logistic_regression
+    │   │       │   │   │   │   ├── custom_module
+    │   │       │   │   │   │   │   ├── kompute_model_ml
+    │   │       │   │   │   │   │   │   ├── config.py
+    │   │       │   │   │   │   │   │   ├── include
+    │   │       │   │   │   │   │   │   ├── KomputeModelMLNode.cpp
+    │   │       │   │   │   │   │   │   ├── KomputeModelMLNode.h
+    │   │       │   │   │   │   │   │   ├── register_types.cpp
+    │   │       │   │   │   │   │   │   ├── register_types.h
+    │   │       │   │   │   │   │   │   └── SCsub
+    │   │       │   │   │   │   │   └── README.md
+    │   │       │   │   │   │   ├── gdnative_shared
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   ├── README.md
+    │   │       │   │   │   │   │   └── src
+    │   │       │   │   │   │   │       ├── KomputeGdNative.cpp
+    │   │       │   │   │   │   │       ├── KomputeModelML.cpp
+    │   │       │   │   │   │   │       └── KomputeModelML.hpp
+    │   │       │   │   │   │   ├── godot_engine
+    │   │       │   │   │   │   ├── godot_resources
+    │   │       │   │   │   │   │   ├── assets
+    │   │       │   │   │   │   │   │   ├── CustomModuleExampleScene.tscn
+    │   │       │   │   │   │   │   │   ├── default_env.tres
+    │   │       │   │   │   │   │   │   ├── DynamicExampleScene.tscn
+    │   │       │   │   │   │   │   │   ├── icon.png
+    │   │       │   │   │   │   │   │   ├── icon.png.import
+    │   │       │   │   │   │   │   │   ├── roboto.ttf
+    │   │       │   │   │   │   │   │   └── TextFormat.theme
+    │   │       │   │   │   │   │   └── scripts
+    │   │       │   │   │   │   │       ├── CustomModuleExampleScene.gd
+    │   │       │   │   │   │   │       ├── DynamicExampleScript.gd
+    │   │       │   │   │   │   │       ├── KomputeNativeClass.gdns
+    │   │       │   │   │   │   │       └── KomputeNativeLibrary.gdnlib
+    │   │       │   │   │   │   ├── project.godot
+    │   │       │   │   │   │   └── README.md
+    │   │       │   │   │   ├── logistic_regression
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   ├── README.md
+    │   │       │   │   │   │   ├── shader
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   └── my_shader.comp
+    │   │       │   │   │   │   └── src
+    │   │       │   │   │   │       ├── CMakeLists.txt
+    │   │       │   │   │   │       └── main.cpp
+    │   │       │   │   │   ├── neural_network_vgg7
+    │   │       │   │   │   │   ├── import_vgg7.py
+    │   │       │   │   │   │   ├── out.png
+    │   │       │   │   │   │   ├── README.md
+    │   │       │   │   │   │   ├── run_vgg7.py
+    │   │       │   │   │   │   ├── sh_common.py
+    │   │       │   │   │   │   ├── sh_conv.py
+    │   │       │   │   │   │   └── w2wbinit.png
+    │   │       │   │   │   ├── pi4_mesa_build
+    │   │       │   │   │   │   └── README.md
+    │   │       │   │   │   └── python_naive_matmul
+    │   │       │   │   │       ├── benchmark.py
+    │   │       │   │   │       ├── first_example.py
+    │   │       │   │   │       ├── imp1_naive.py
+    │   │       │   │   │       ├── imp2_tiled.py
+    │   │       │   │   │       ├── imp3_better_tiling.py
+    │   │       │   │   │       ├── matmul_plot.py
+    │   │       │   │   │       └── README.md
+    │   │       │   │   ├── external
+    │   │       │   │   │   └── bin
+    │   │       │   │   │       └── xxd.c
+    │   │       │   │   ├── GOVERNANCE.md
+    │   │       │   │   ├── kompute-config.cmake
+    │   │       │   │   ├── LICENSE
+    │   │       │   │   ├── Makefile
+    │   │       │   │   ├── MANIFEST.in
+    │   │       │   │   ├── pylintrc
+    │   │       │   │   ├── python
+    │   │       │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   ├── README.md
+    │   │       │   │   │   ├── src
+    │   │       │   │   │   │   ├── docstrings.hpp
+    │   │       │   │   │   │   ├── main.cpp
+    │   │       │   │   │   │   └── utils.hpp
+    │   │       │   │   │   └── test
+    │   │       │   │   │       ├── __init__.py
+    │   │       │   │   │       ├── requirements-dev.txt
+    │   │       │   │   │       ├── test_array_multiplication.py
+    │   │       │   │   │       ├── test_kompute.py
+    │   │       │   │   │       ├── test_logistic_regression.py
+    │   │       │   │   │       ├── test_tensor_types.py
+    │   │       │   │   │       └── utils.py
+    │   │       │   │   ├── README.md
+    │   │       │   │   ├── scripts
+    │   │       │   │   │   ├── build_release_linux.sh
+    │   │       │   │   │   ├── build_release_windows.sh
+    │   │       │   │   │   ├── convert_shaders.py
+    │   │       │   │   │   ├── push_folder_to_branch.sh
+    │   │       │   │   │   └── requirements.txt
+    │   │       │   │   ├── SECURITY.md
+    │   │       │   │   ├── setup.py
+    │   │       │   │   ├── src
+    │   │       │   │   │   ├── Algorithm.cpp
+    │   │       │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   ├── Core.cpp
+    │   │       │   │   │   ├── include
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   └── kompute
+    │   │       │   │   │   │       ├── Algorithm.hpp
+    │   │       │   │   │   │       ├── Core.hpp
+    │   │       │   │   │   │       ├── Kompute.hpp
+    │   │       │   │   │   │       ├── logger
+    │   │       │   │   │   │       │   └── Logger.hpp
+    │   │       │   │   │   │       ├── Manager.hpp
+    │   │       │   │   │   │       ├── operations
+    │   │       │   │   │   │       │   ├── OpAlgoDispatch.hpp
+    │   │       │   │   │   │       │   ├── OpBase.hpp
+    │   │       │   │   │   │       │   ├── OpBufferSyncDevice.hpp
+    │   │       │   │   │   │       │   ├── OpBufferSyncLocal.hpp
+    │   │       │   │   │   │       │   ├── OpMemoryBarrier.hpp
+    │   │       │   │   │   │       │   ├── OpMult.hpp
+    │   │       │   │   │   │       │   ├── OpTensorCopy.hpp
+    │   │       │   │   │   │       │   ├── OpTensorFill.hpp
+    │   │       │   │   │   │       │   ├── OpTensorSyncDevice.hpp
+    │   │       │   │   │   │       │   └── OpTensorSyncLocal.hpp
+    │   │       │   │   │   │       ├── Sequence.hpp
+    │   │       │   │   │   │       └── Tensor.hpp
+    │   │       │   │   │   ├── logger
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   └── Logger.cpp
+    │   │       │   │   │   ├── Manager.cpp
+    │   │       │   │   │   ├── OpAlgoDispatch.cpp
+    │   │       │   │   │   ├── OpBufferSyncDevice.cpp
+    │   │       │   │   │   ├── OpBufferSyncLocal.cpp
+    │   │       │   │   │   ├── OpMemoryBarrier.cpp
+    │   │       │   │   │   ├── OpTensorCopy.cpp
+    │   │       │   │   │   ├── OpTensorFill.cpp
+    │   │       │   │   │   ├── OpTensorSyncDevice.cpp
+    │   │       │   │   │   ├── OpTensorSyncLocal.cpp
+    │   │       │   │   │   ├── Sequence.cpp
+    │   │       │   │   │   ├── shaders
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   ├── glsl
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   ├── ShaderLogisticRegression.comp
+    │   │       │   │   │   │   │   ├── ShaderLogisticRegression.hpp.in
+    │   │       │   │   │   │   │   ├── ShaderOpMult.comp
+    │   │       │   │   │   │   │   └── ShaderOpMult.hpp.in
+    │   │       │   │   │   │   └── hlsl
+    │   │       │   │   │   │       └── computeheadless.comp
+    │   │       │   │   │   └── Tensor.cpp
+    │   │       │   │   ├── test
+    │   │       │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   ├── compiled_shaders_include
+    │   │       │   │   │   │   └── kompute_test
+    │   │       │   │   │   │       └── shaders
+    │   │       │   │   │   │           ├── shadertest_logistic_regression.hpp
+    │   │       │   │   │   │           ├── shadertest_op_custom_shader.hpp
+    │   │       │   │   │   │           └── shadertest_workgroup.hpp
+    │   │       │   │   │   ├── shaders
+    │   │       │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   ├── glsl
+    │   │       │   │   │   │   │   ├── CMakeLists.txt
+    │   │       │   │   │   │   │   ├── test_logistic_regression_shader.comp
+    │   │       │   │   │   │   │   ├── test_op_custom_shader.comp
+    │   │       │   │   │   │   │   ├── test_shader.comp
+    │   │       │   │   │   │   │   └── test_workgroup_shader.comp
+    │   │       │   │   │   │   ├── Utils.cpp
+    │   │       │   │   │   │   └── Utils.hpp
+    │   │       │   │   │   ├── TestAsyncOperations.cpp
+    │   │       │   │   │   ├── TestDestroy.cpp
+    │   │       │   │   │   ├── TestLogisticRegression.cpp
+    │   │       │   │   │   ├── TestManager.cpp
+    │   │       │   │   │   ├── TestMultipleAlgoExecutions.cpp
+    │   │       │   │   │   ├── TestOpShadersFromStringAndFile.cpp
+    │   │       │   │   │   ├── TestOpTensorCopy.cpp
+    │   │       │   │   │   ├── TestOpTensorCreate.cpp
+    │   │       │   │   │   ├── TestOpTensorSync.cpp
+    │   │       │   │   │   ├── TestPushConstant.cpp
+    │   │       │   │   │   ├── TestSequence.cpp
+    │   │       │   │   │   ├── TestSpecializationConstant.cpp
+    │   │       │   │   │   ├── TestTensor.cpp
+    │   │       │   │   │   └── TestWorkgroup.cpp
+    │   │       │   │   ├── vcpkg.json.opt
+    │   │       │   │   └── VERSION
+    │   │       │   └── kompute-shaders
+    │   │       │       ├── common.comp
+    │   │       │       ├── op_add.comp
+    │   │       │       ├── op_addrow.comp
+    │   │       │       ├── op_cpy_f16_f16.comp
+    │   │       │       ├── op_cpy_f16_f32.comp
+    │   │       │       ├── op_cpy_f32_f16.comp
+    │   │       │       ├── op_cpy_f32_f32.comp
+    │   │       │       ├── op_diagmask.comp
+    │   │       │       ├── op_gelu.comp
+    │   │       │       ├── op_getrows.comp
+    │   │       │       ├── op_getrows_f16.comp
+    │   │       │       ├── op_getrows_f32.comp
+    │   │       │       ├── op_getrows_q4_0.comp
+    │   │       │       ├── op_getrows_q4_1.comp
+    │   │       │       ├── op_getrows_q6_k.comp
+    │   │       │       ├── op_mul.comp
+    │   │       │       ├── op_mul_mat_f16.comp
+    │   │       │       ├── op_mul_mat_mat_f32.comp
+    │   │       │       ├── op_mul_mat_q4_0.comp
+    │   │       │       ├── op_mul_mat_q4_1.comp
+    │   │       │       ├── op_mul_mat_q4_k.comp
+    │   │       │       ├── op_mul_mat_q6_k.comp
+    │   │       │       ├── op_mul_mat_q8_0.comp
+    │   │       │       ├── op_mul_mv_q_n.comp
+    │   │       │       ├── op_mul_mv_q_n_pre.comp
+    │   │       │       ├── op_norm.comp
+    │   │       │       ├── op_relu.comp
+    │   │       │       ├── op_rmsnorm.comp
+    │   │       │       ├── op_rope_neox_f16.comp
+    │   │       │       ├── op_rope_neox_f32.comp
+    │   │       │       ├── op_rope_norm_f16.comp
+    │   │       │       ├── op_rope_norm_f32.comp
+    │   │       │       ├── op_scale_8.comp
+    │   │       │       ├── op_scale.comp
+    │   │       │       ├── op_silu.comp
+    │   │       │       ├── op_softmax.comp
+    │   │       │       └── rope_common.comp
+    │   │       ├── ggml-metal
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── ggml-metal-impl.h
+    │   │       │   ├── ggml-metal.m
+    │   │       │   └── ggml-metal.metal
+    │   │       ├── ggml-musa
+    │   │       │   └── CMakeLists.txt
+    │   │       ├── ggml-opencl
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── ggml-opencl.cpp
+    │   │       │   └── kernels
+    │   │       │       ├── add.cl
+    │   │       │       ├── clamp.cl
+    │   │       │       ├── cpy.cl
+    │   │       │       ├── cvt.cl
+    │   │       │       ├── diag_mask_inf.cl
+    │   │       │       ├── embed_kernel.py
+    │   │       │       ├── gelu.cl
+    │   │       │       ├── gemv_noshuffle.cl
+    │   │       │       ├── gemv_noshuffle_general.cl
+    │   │       │       ├── get_rows.cl
+    │   │       │       ├── im2col_f16.cl
+    │   │       │       ├── im2col_f32.cl
+    │   │       │       ├── mul.cl
+    │   │       │       ├── mul_mat_Ab_Bi_8x4.cl
+    │   │       │       ├── mul_mv_f16_f16.cl
+    │   │       │       ├── mul_mv_f16_f32_1row.cl
+    │   │       │       ├── mul_mv_f16_f32.cl
+    │   │       │       ├── mul_mv_f16_f32_l4.cl
+    │   │       │       ├── mul_mv_f32_f32.cl
+    │   │       │       ├── mul_mv_q4_0_f32_1d_16x_flat.cl
+    │   │       │       ├── mul_mv_q4_0_f32_1d_8x_flat.cl
+    │   │       │       ├── mul_mv_q4_0_f32_8x_flat.cl
+    │   │       │       ├── mul_mv_q4_0_f32.cl
+    │   │       │       ├── mul_mv_q4_0_f32_v.cl
+    │   │       │       ├── mul_mv_q6_k.cl
+    │   │       │       ├── norm.cl
+    │   │       │       ├── relu.cl
+    │   │       │       ├── rms_norm.cl
+    │   │       │       ├── rope.cl
+    │   │       │       ├── scale.cl
+    │   │       │       ├── silu.cl
+    │   │       │       ├── softmax_4_f16.cl
+    │   │       │       ├── softmax_4_f32.cl
+    │   │       │       ├── softmax_f16.cl
+    │   │       │       ├── softmax_f32.cl
+    │   │       │       └── transpose.cl
+    │   │       ├── ggml-opt.cpp
+    │   │       ├── ggml-quants.c
+    │   │       ├── ggml-quants.h
+    │   │       ├── ggml-rpc
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   └── ggml-rpc.cpp
+    │   │       ├── ggml-sycl
+    │   │       │   ├── backend.hpp
+    │   │       │   ├── binbcast.cpp
+    │   │       │   ├── binbcast.hpp
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── common.cpp
+    │   │       │   ├── common.hpp
+    │   │       │   ├── concat.cpp
+    │   │       │   ├── concat.hpp
+    │   │       │   ├── conv.cpp
+    │   │       │   ├── convert.cpp
+    │   │       │   ├── convert.hpp
+    │   │       │   ├── conv.hpp
+    │   │       │   ├── cpy.cpp
+    │   │       │   ├── cpy.hpp
+    │   │       │   ├── dequantize.hpp
+    │   │       │   ├── dmmv.cpp
+    │   │       │   ├── dmmv.hpp
+    │   │       │   ├── dpct
+    │   │       │   │   └── helper.hpp
+    │   │       │   ├── element_wise.cpp
+    │   │       │   ├── element_wise.hpp
+    │   │       │   ├── gemm.hpp
+    │   │       │   ├── getrows.cpp
+    │   │       │   ├── getrows.hpp
+    │   │       │   ├── ggml-sycl.cpp
+    │   │       │   ├── gla.cpp
+    │   │       │   ├── gla.hpp
+    │   │       │   ├── im2col.cpp
+    │   │       │   ├── im2col.hpp
+    │   │       │   ├── mmq.cpp
+    │   │       │   ├── mmq.hpp
+    │   │       │   ├── mmvq.cpp
+    │   │       │   ├── mmvq.hpp
+    │   │       │   ├── norm.cpp
+    │   │       │   ├── norm.hpp
+    │   │       │   ├── outprod.cpp
+    │   │       │   ├── outprod.hpp
+    │   │       │   ├── presets.hpp
+    │   │       │   ├── rope.cpp
+    │   │       │   ├── rope.hpp
+    │   │       │   ├── softmax.cpp
+    │   │       │   ├── softmax.hpp
+    │   │       │   ├── sycl_hw.cpp
+    │   │       │   ├── sycl_hw.hpp
+    │   │       │   ├── tsembd.cpp
+    │   │       │   ├── tsembd.hpp
+    │   │       │   ├── vecdotq.hpp
+    │   │       │   ├── wkv.cpp
+    │   │       │   └── wkv.hpp
+    │   │       ├── ggml-threading.cpp
+    │   │       ├── ggml-threading.h
+    │   │       ├── ggml-vulkan
+    │   │       │   ├── cmake
+    │   │       │   │   └── host-toolchain.cmake.in
+    │   │       │   ├── CMakeLists.txt
+    │   │       │   ├── ggml-vulkan.cpp
+    │   │       │   └── vulkan-shaders
+    │   │       │       ├── acc.comp
+    │   │       │       ├── add.comp
+    │   │       │       ├── argmax.comp
+    │   │       │       ├── argsort.comp
+    │   │       │       ├── clamp.comp
+    │   │       │       ├── CMakeLists.txt
+    │   │       │       ├── concat.comp
+    │   │       │       ├── contig_copy.comp
+    │   │       │       ├── copy.comp
+    │   │       │       ├── copy_from_quant.comp
+    │   │       │       ├── copy_to_quant.comp
+    │   │       │       ├── cos.comp
+    │   │       │       ├── count_equal.comp
+    │   │       │       ├── dequant_f32.comp
+    │   │       │       ├── dequant_funcs_cm2.comp
+    │   │       │       ├── dequant_funcs.comp
+    │   │       │       ├── dequant_head.comp
+    │   │       │       ├── dequant_iq1_m.comp
+    │   │       │       ├── dequant_iq1_s.comp
+    │   │       │       ├── dequant_iq2_s.comp
+    │   │       │       ├── dequant_iq2_xs.comp
+    │   │       │       ├── dequant_iq2_xxs.comp
+    │   │       │       ├── dequant_iq3_s.comp
+    │   │       │       ├── dequant_iq3_xxs.comp
+    │   │       │       ├── dequant_iq4_nl.comp
+    │   │       │       ├── dequant_iq4_xs.comp
+    │   │       │       ├── dequant_q2_k.comp
+    │   │       │       ├── dequant_q3_k.comp
+    │   │       │       ├── dequant_q4_0.comp
+    │   │       │       ├── dequant_q4_1.comp
+    │   │       │       ├── dequant_q4_k.comp
+    │   │       │       ├── dequant_q5_0.comp
+    │   │       │       ├── dequant_q5_1.comp
+    │   │       │       ├── dequant_q5_k.comp
+    │   │       │       ├── dequant_q6_k.comp
+    │   │       │       ├── dequant_q8_0.comp
+    │   │       │       ├── diag_mask_inf.comp
+    │   │       │       ├── div.comp
+    │   │       │       ├── flash_attn_cm2.comp
+    │   │       │       ├── flash_attn_split_k_reduce.comp
+    │   │       │       ├── gelu.comp
+    │   │       │       ├── gelu_quick.comp
+    │   │       │       ├── generic_binary_head.comp
+    │   │       │       ├── generic_head.comp
+    │   │       │       ├── generic_unary_head.comp
+    │   │       │       ├── get_rows.comp
+    │   │       │       ├── get_rows_quant.comp
+    │   │       │       ├── group_norm.comp
+    │   │       │       ├── im2col.comp
+    │   │       │       ├── l2_norm.comp
+    │   │       │       ├── leaky_relu.comp
+    │   │       │       ├── mul.comp
+    │   │       │       ├── mul_mat_split_k_reduce.comp
+    │   │       │       ├── mul_mat_vec_base.comp
+    │   │       │       ├── mul_mat_vec.comp
+    │   │       │       ├── mul_mat_vec_iq1_m.comp
+    │   │       │       ├── mul_mat_vec_iq1_s.comp
+    │   │       │       ├── mul_mat_vec_iq2_s.comp
+    │   │       │       ├── mul_mat_vec_iq2_xs.comp
+    │   │       │       ├── mul_mat_vec_iq2_xxs.comp
+    │   │       │       ├── mul_mat_vec_iq3_s.comp
+    │   │       │       ├── mul_mat_vec_iq3_xxs.comp
+    │   │       │       ├── mul_mat_vec_nc.comp
+    │   │       │       ├── mul_mat_vec_p021.comp
+    │   │       │       ├── mul_mat_vec_q2_k.comp
+    │   │       │       ├── mul_mat_vec_q3_k.comp
+    │   │       │       ├── mul_mat_vec_q4_k.comp
+    │   │       │       ├── mul_mat_vec_q5_k.comp
+    │   │       │       ├── mul_mat_vec_q6_k.comp
+    │   │       │       ├── mul_mm_cm2.comp
+    │   │       │       ├── mul_mm.comp
+    │   │       │       ├── mul_mmq.comp
+    │   │       │       ├── mul_mmq_funcs.comp
+    │   │       │       ├── norm.comp
+    │   │       │       ├── opt_step_adamw.comp
+    │   │       │       ├── pad.comp
+    │   │       │       ├── pool2d.comp
+    │   │       │       ├── quantize_q8_1.comp
+    │   │       │       ├── relu.comp
+    │   │       │       ├── repeat_back.comp
+    │   │       │       ├── repeat.comp
+    │   │       │       ├── rms_norm_back.comp
+    │   │       │       ├── rms_norm.comp
+    │   │       │       ├── rope_head.comp
+    │   │       │       ├── rope_multi.comp
+    │   │       │       ├── rope_neox.comp
+    │   │       │       ├── rope_norm.comp
+    │   │       │       ├── rope_vision.comp
+    │   │       │       ├── scale.comp
+    │   │       │       ├── sigmoid.comp
+    │   │       │       ├── silu_back.comp
+    │   │       │       ├── silu.comp
+    │   │       │       ├── sin.comp
+    │   │       │       ├── soft_max_back.comp
+    │   │       │       ├── soft_max.comp
+    │   │       │       ├── square.comp
+    │   │       │       ├── sub.comp
+    │   │       │       ├── sum_rows.comp
+    │   │       │       ├── tanh.comp
+    │   │       │       ├── test_coopmat2_support.comp
+    │   │       │       ├── test_coopmat_support.comp
+    │   │       │       ├── test_integer_dot_support.comp
+    │   │       │       ├── timestep_embedding.comp
+    │   │       │       ├── types.comp
+    │   │       │       ├── upscale.comp
+    │   │       │       ├── vulkan-shaders-gen.cpp
+    │   │       │       ├── wkv6.comp
+    │   │       │       └── wkv7.comp
+    │   │       └── gguf.cpp
+    │   ├── gguf-py
+    │   │   ├── examples
+    │   │   │   ├── reader.py
+    │   │   │   └── writer.py
+    │   │   ├── gguf
+    │   │   │   ├── constants.py
+    │   │   │   ├── gguf.py
+    │   │   │   ├── gguf_reader.py
+    │   │   │   ├── gguf_writer.py
+    │   │   │   ├── __init__.py
+    │   │   │   ├── lazy.py
+    │   │   │   ├── metadata.py
+    │   │   │   ├── __pycache__
+    │   │   │   │   ├── constants.cpython-312.pyc
+    │   │   │   │   ├── gguf_reader.cpython-312.pyc
+    │   │   │   │   ├── gguf_writer.cpython-312.pyc
+    │   │   │   │   ├── __init__.cpython-312.pyc
+    │   │   │   │   ├── lazy.cpython-312.pyc
+    │   │   │   │   ├── metadata.cpython-312.pyc
+    │   │   │   │   ├── quants.cpython-312.pyc
+    │   │   │   │   ├── tensor_mapping.cpython-312.pyc
+    │   │   │   │   ├── utility.cpython-312.pyc
+    │   │   │   │   └── vocab.cpython-312.pyc
+    │   │   │   ├── py.typed
+    │   │   │   ├── quants.py
+    │   │   │   ├── scripts
+    │   │   │   │   ├── gguf_convert_endian.py
+    │   │   │   │   ├── gguf_dump.py
+    │   │   │   │   ├── gguf_editor_gui.py
+    │   │   │   │   ├── gguf_hash.py
+    │   │   │   │   ├── gguf_new_metadata.py
+    │   │   │   │   ├── gguf_set_metadata.py
+    │   │   │   │   └── __init__.py
+    │   │   │   ├── tensor_mapping.py
+    │   │   │   ├── utility.py
+    │   │   │   └── vocab.py
+    │   │   ├── LICENSE
+    │   │   ├── pyproject.toml
+    │   │   ├── README.md
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── test_metadata.py
+    │   │       └── test_quants.py
+    │   ├── grammars
+    │   │   ├── arithmetic.gbnf
+    │   │   ├── c.gbnf
+    │   │   ├── chess.gbnf
+    │   │   ├── english.gbnf
+    │   │   ├── japanese.gbnf
+    │   │   ├── json_arr.gbnf
+    │   │   ├── json.gbnf
+    │   │   ├── list.gbnf
+    │   │   └── README.md
+    │   ├── include
+    │   │   ├── llama-cpp.h
+    │   │   └── llama.h
+    │   ├── LICENSE
+    │   ├── licenses
+    │   │   ├── LICENSE-curl
+    │   │   ├── LICENSE-httplib
+    │   │   ├── LICENSE-jsonhpp
+    │   │   └── LICENSE-linenoise
+    │   ├── llama-cli
+    │   ├── llama-export-lora
+    │   ├── llama-quantize
+    │   ├── Makefile
+    │   ├── media
+    │   │   ├── llama0-banner.png
+    │   │   ├── llama0-logo.png
+    │   │   ├── llama1-banner.png
+    │   │   ├── llama1-logo.png
+    │   │   ├── llama1-logo.svg
+    │   │   ├── matmul.png
+    │   │   └── matmul.svg
+    │   ├── models
+    │   │   ├── ggml-vocab-aquila.gguf
+    │   │   ├── ggml-vocab-baichuan.gguf
+    │   │   ├── ggml-vocab-bert-bge.gguf
+    │   │   ├── ggml-vocab-bert-bge.gguf.inp
+    │   │   ├── ggml-vocab-bert-bge.gguf.out
+    │   │   ├── ggml-vocab-chameleon.gguf.inp
+    │   │   ├── ggml-vocab-chameleon.gguf.out
+    │   │   ├── ggml-vocab-command-r.gguf
+    │   │   ├── ggml-vocab-command-r.gguf.inp
+    │   │   ├── ggml-vocab-command-r.gguf.out
+    │   │   ├── ggml-vocab-deepseek-coder.gguf
+    │   │   ├── ggml-vocab-deepseek-coder.gguf.inp
+    │   │   ├── ggml-vocab-deepseek-coder.gguf.out
+    │   │   ├── ggml-vocab-deepseek-llm.gguf
+    │   │   ├── ggml-vocab-deepseek-llm.gguf.inp
+    │   │   ├── ggml-vocab-deepseek-llm.gguf.out
+    │   │   ├── ggml-vocab-deepseek-r1-qwen.gguf.inp
+    │   │   ├── ggml-vocab-deepseek-r1-qwen.gguf.out
+    │   │   ├── ggml-vocab-falcon.gguf
+    │   │   ├── ggml-vocab-falcon.gguf.inp
+    │   │   ├── ggml-vocab-falcon.gguf.out
+    │   │   ├── ggml-vocab-gpt-2.gguf
+    │   │   ├── ggml-vocab-gpt-2.gguf.inp
+    │   │   ├── ggml-vocab-gpt-2.gguf.out
+    │   │   ├── ggml-vocab-gpt-4o.gguf.inp
+    │   │   ├── ggml-vocab-gpt-4o.gguf.out
+    │   │   ├── ggml-vocab-gpt-neox.gguf
+    │   │   ├── ggml-vocab-llama4.gguf.inp
+    │   │   ├── ggml-vocab-llama4.gguf.out
+    │   │   ├── ggml-vocab-llama-bpe.gguf
+    │   │   ├── ggml-vocab-llama-bpe.gguf.inp
+    │   │   ├── ggml-vocab-llama-bpe.gguf.out
+    │   │   ├── ggml-vocab-llama-spm.gguf
+    │   │   ├── ggml-vocab-llama-spm.gguf.inp
+    │   │   ├── ggml-vocab-llama-spm.gguf.out
+    │   │   ├── ggml-vocab-mpt.gguf
+    │   │   ├── ggml-vocab-mpt.gguf.inp
+    │   │   ├── ggml-vocab-mpt.gguf.out
+    │   │   ├── ggml-vocab-phi-3.gguf
+    │   │   ├── ggml-vocab-phi-3.gguf.inp
+    │   │   ├── ggml-vocab-phi-3.gguf.out
+    │   │   ├── ggml-vocab-qwen2.gguf
+    │   │   ├── ggml-vocab-qwen2.gguf.inp
+    │   │   ├── ggml-vocab-qwen2.gguf.out
+    │   │   ├── ggml-vocab-refact.gguf
+    │   │   ├── ggml-vocab-refact.gguf.inp
+    │   │   ├── ggml-vocab-refact.gguf.out
+    │   │   ├── ggml-vocab-roberta-bpe.gguf.inp
+    │   │   ├── ggml-vocab-roberta-bpe.gguf.out
+    │   │   ├── ggml-vocab-starcoder.gguf
+    │   │   ├── ggml-vocab-starcoder.gguf.inp
+    │   │   ├── ggml-vocab-starcoder.gguf.out
+    │   │   └── templates
+    │   │       ├── CohereForAI-c4ai-command-r7b-12-2024-tool_use.jinja
+    │   │       ├── CohereForAI-c4ai-command-r-plus-tool_use.jinja
+    │   │       ├── deepseek-ai-DeepSeek-R1-Distill-Llama-8B.jinja
+    │   │       ├── deepseek-ai-DeepSeek-R1-Distill-Qwen-32B.jinja
+    │   │       ├── fireworks-ai-llama-3-firefunction-v2.jinja
+    │   │       ├── google-gemma-2-2b-it.jinja
+    │   │       ├── llama-cpp-deepseek-r1.jinja
+    │   │       ├── meetkai-functionary-medium-v3.1.jinja
+    │   │       ├── meetkai-functionary-medium-v3.2.jinja
+    │   │       ├── meta-llama-Llama-3.1-8B-Instruct.jinja
+    │   │       ├── meta-llama-Llama-3.2-3B-Instruct.jinja
+    │   │       ├── meta-llama-Llama-3.3-70B-Instruct.jinja
+    │   │       ├── microsoft-Phi-3.5-mini-instruct.jinja
+    │   │       ├── mistralai-Mistral-Nemo-Instruct-2407.jinja
+    │   │       ├── NousResearch-Hermes-2-Pro-Llama-3-8B-tool_use.jinja
+    │   │       ├── NousResearch-Hermes-3-Llama-3.1-8B-tool_use.jinja
+    │   │       ├── Qwen-Qwen2.5-7B-Instruct.jinja
+    │   │       └── README.md
+    │   ├── mypy.ini
+    │   ├── pocs
+    │   │   ├── CMakeLists.txt
+    │   │   └── vdot
+    │   │       ├── CMakeLists.txt
+    │   │       ├── q8dot.cpp
+    │   │       └── vdot.cpp
+    │   ├── poetry.lock
+    │   ├── prompts
+    │   │   ├── alpaca.txt
+    │   │   ├── assistant.txt
+    │   │   ├── chat.txt
+    │   │   ├── chat-with-baichuan.txt
+    │   │   ├── chat-with-bob.txt
+    │   │   ├── chat-with-qwen.txt
+    │   │   ├── chat-with-vicuna-v0.txt
+    │   │   ├── chat-with-vicuna-v1.txt
+    │   │   ├── dan-modified.txt
+    │   │   ├── dan.txt
+    │   │   ├── LLM-questions.txt
+    │   │   ├── mnemonics.txt
+    │   │   ├── parallel-questions.txt
+    │   │   └── reason-act.txt
+    │   ├── pyproject.toml
+    │   ├── pyrightconfig.json
+    │   ├── README.md
+    │   ├── requirements
+    │   │   ├── requirements-all.txt
+    │   │   ├── requirements-compare-llama-bench.txt
+    │   │   ├── requirements-convert_hf_to_gguf.txt
+    │   │   ├── requirements-convert_hf_to_gguf_update.txt
+    │   │   ├── requirements-convert_legacy_llama.txt
+    │   │   ├── requirements-convert_llama_ggml_to_gguf.txt
+    │   │   ├── requirements-convert_lora_to_gguf.txt
+    │   │   ├── requirements-gguf_editor_gui.txt
+    │   │   ├── requirements-pydantic.txt
+    │   │   ├── requirements-test-tokenizer-random.txt
+    │   │   └── requirements-tool_bench.txt
+    │   ├── requirements.txt
+    │   ├── scripts
+    │   │   ├── apple
+    │   │   │   ├── validate-apps.sh
+    │   │   │   ├── validate-ios.sh
+    │   │   │   ├── validate-macos.sh
+    │   │   │   ├── validate-tvos.sh
+    │   │   │   └── validate-visionos.sh
+    │   │   ├── build-info.sh
+    │   │   ├── check-requirements.sh
+    │   │   ├── ci-run.sh
+    │   │   ├── compare-commits.sh
+    │   │   ├── compare-llama-bench.py
+    │   │   ├── debug-test.sh
+    │   │   ├── fetch_server_test_models.py
+    │   │   ├── gen-authors.sh
+    │   │   ├── gen-unicode-data.py
+    │   │   ├── get_chat_template.py
+    │   │   ├── get-flags.mk
+    │   │   ├── get-hellaswag.sh
+    │   │   ├── get-pg.sh
+    │   │   ├── get-wikitext-103.sh
+    │   │   ├── get-wikitext-2.sh
+    │   │   ├── get-winogrande.sh
+    │   │   ├── hf.sh
+    │   │   ├── install-oneapi.bat
+    │   │   ├── qnt-all.sh
+    │   │   ├── run-all-perf.sh
+    │   │   ├── run-all-ppl.sh
+    │   │   ├── sync-ggml-am.sh
+    │   │   ├── sync-ggml.last
+    │   │   ├── sync-ggml.sh
+    │   │   ├── tool_bench.py
+    │   │   ├── tool_bench.sh
+    │   │   ├── verify-checksum-models.py
+    │   │   └── xxd.cmake
+    │   ├── SECURITY.md
+    │   ├── src
+    │   │   ├── CMakeLists.txt
+    │   │   ├── llama-adapter.cpp
+    │   │   ├── llama-adapter.h
+    │   │   ├── llama-arch.cpp
+    │   │   ├── llama-arch.h
+    │   │   ├── llama-batch.cpp
+    │   │   ├── llama-batch.h
+    │   │   ├── llama-chat.cpp
+    │   │   ├── llama-chat.h
+    │   │   ├── llama-context.cpp
+    │   │   ├── llama-context.h
+    │   │   ├── llama-cparams.cpp
+    │   │   ├── llama-cparams.h
+    │   │   ├── llama.cpp
+    │   │   ├── llama-grammar.cpp
+    │   │   ├── llama-grammar.h
+    │   │   ├── llama-graph.cpp
+    │   │   ├── llama-graph.h
+    │   │   ├── llama-hparams.cpp
+    │   │   ├── llama-hparams.h
+    │   │   ├── llama-impl.cpp
+    │   │   ├── llama-impl.h
+    │   │   ├── llama-io.cpp
+    │   │   ├── llama-io.h
+    │   │   ├── llama-kv-cache.cpp
+    │   │   ├── llama-kv-cache.h
+    │   │   ├── llama-memory.cpp
+    │   │   ├── llama-memory.h
+    │   │   ├── llama-mmap.cpp
+    │   │   ├── llama-mmap.h
+    │   │   ├── llama-model.cpp
+    │   │   ├── llama-model.h
+    │   │   ├── llama-model-loader.cpp
+    │   │   ├── llama-model-loader.h
+    │   │   ├── llama-quant.cpp
+    │   │   ├── llama-quant.h
+    │   │   ├── llama-sampling.cpp
+    │   │   ├── llama-sampling.h
+    │   │   ├── llama-vocab.cpp
+    │   │   ├── llama-vocab.h
+    │   │   ├── unicode.cpp
+    │   │   ├── unicode-data.cpp
+    │   │   ├── unicode-data.h
+    │   │   └── unicode.h
+    │   └── tests
+    │       ├── CMakeLists.txt
+    │       ├── get-model.cpp
+    │       ├── get-model.h
+    │       ├── run-json-schema-to-grammar.mjs
+    │       ├── test-arg-parser.cpp
+    │       ├── test-autorelease.cpp
+    │       ├── test-backend-ops.cpp
+    │       ├── test-barrier.cpp
+    │       ├── test-c.c
+    │       ├── test-chat.cpp
+    │       ├── test-chat-template.cpp
+    │       ├── test-double-float.cpp
+    │       ├── test-gguf.cpp
+    │       ├── test-grammar-integration.cpp
+    │       ├── test-grammar-llguidance.cpp
+    │       ├── test-grammar-parser.cpp
+    │       ├── test-json-schema-to-grammar.cpp
+    │       ├── test-llama-grammar.cpp
+    │       ├── test-log.cpp
+    │       ├── test-lora-conversion-inference.sh
+    │       ├── test-model-load-cancel.cpp
+    │       ├── test-opt.cpp
+    │       ├── test-quantize-fns.cpp
+    │       ├── test-quantize-perf.cpp
+    │       ├── test-rope.cpp
+    │       ├── test-sampling.cpp
+    │       ├── test-tokenizer-0.cpp
+    │       ├── test-tokenizer-0.py
+    │       ├── test-tokenizer-0.sh
+    │       ├── test-tokenizer-1-bpe.cpp
+    │       ├── test-tokenizer-1-spm.cpp
+    │       └── test-tokenizer-random.py
+    ├── lora_model
+    │   ├── adapter_config.json
+    │   ├── adapter_model.safetensors
+    │   ├── README.md
+    │   ├── special_tokens_map.json
+    │   ├── tokenizer_config.json
+    │   └── tokenizer.json
+    ├── model
+    │   ├── config.json
+    │   ├── generation_config.json
+    │   ├── model-00001-of-00004.safetensors
+    │   ├── model-00002-of-00004.safetensors
+    │   ├── model-00003-of-00004.safetensors
+    │   ├── model-00004-of-00004.safetensors
+    │   ├── model.safetensors.index.json
+    │   ├── special_tokens_map.json
+    │   ├── tokenizer_config.json
+    │   ├── tokenizer.json
+    │   └── unsloth.Q8_0.gguf
+    ├── outputs
+    │   └── checkpoint-60
+    │       ├── adapter_config.json
+    │       ├── adapter_model.safetensors
+    │       ├── optimizer.pt
+    │       ├── README.md
+    │       ├── rng_state.pth
+    │       ├── scheduler.pt
+    │       ├── special_tokens_map.json
+    │       ├── tokenizer_config.json
+    │       ├── tokenizer.json
+    │       ├── trainer_state.json
+    │       └── training_args.bin
+    ├── Qwen2_5_7B_Alpaca.ipynb
+    ├── unsloth_compiled_cache
+    │   ├── __pycache__
+    │   │   ├── UnslothAlignPropTrainer.cpython-311.pyc
+    │   │   ├── UnslothAlignPropTrainer.cpython-313.pyc
+    │   │   ├── UnslothBCOTrainer.cpython-311.pyc
+    │   │   ├── UnslothBCOTrainer.cpython-312.pyc
+    │   │   ├── UnslothBCOTrainer.cpython-313.pyc
+    │   │   ├── UnslothCPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothCPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothCPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothDDPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothDDPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothDPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothDPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothDPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothGKDTrainer.cpython-311.pyc
+    │   │   ├── UnslothGKDTrainer.cpython-312.pyc
+    │   │   ├── UnslothGKDTrainer.cpython-313.pyc
+    │   │   ├── UnslothGRPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothGRPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothGRPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothKTOTrainer.cpython-311.pyc
+    │   │   ├── UnslothKTOTrainer.cpython-312.pyc
+    │   │   ├── UnslothKTOTrainer.cpython-313.pyc
+    │   │   ├── UnslothNashMDTrainer.cpython-311.pyc
+    │   │   ├── UnslothNashMDTrainer.cpython-312.pyc
+    │   │   ├── UnslothNashMDTrainer.cpython-313.pyc
+    │   │   ├── UnslothOnlineDPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothOnlineDPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothOnlineDPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothORPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothORPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothORPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothPPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothPPOTrainer.cpython-312.pyc
+    │   │   ├── UnslothPPOTrainer.cpython-313.pyc
+    │   │   ├── UnslothPRMTrainer.cpython-311.pyc
+    │   │   ├── UnslothPRMTrainer.cpython-312.pyc
+    │   │   ├── UnslothPRMTrainer.cpython-313.pyc
+    │   │   ├── UnslothRewardTrainer.cpython-311.pyc
+    │   │   ├── UnslothRewardTrainer.cpython-312.pyc
+    │   │   ├── UnslothRewardTrainer.cpython-313.pyc
+    │   │   ├── UnslothRLOOTrainer.cpython-311.pyc
+    │   │   ├── UnslothRLOOTrainer.cpython-312.pyc
+    │   │   ├── UnslothRLOOTrainer.cpython-313.pyc
+    │   │   ├── UnslothSFTTrainer.cpython-311.pyc
+    │   │   ├── UnslothSFTTrainer.cpython-312.pyc
+    │   │   ├── UnslothSFTTrainer.cpython-313.pyc
+    │   │   ├── UnslothXPOTrainer.cpython-311.pyc
+    │   │   ├── UnslothXPOTrainer.cpython-312.pyc
+    │   │   └── UnslothXPOTrainer.cpython-313.pyc
+    │   ├── UnslothAlignPropTrainer.py
+    │   ├── UnslothBCOTrainer.py
+    │   ├── UnslothCPOTrainer.py
+    │   ├── UnslothDDPOTrainer.py
+    │   ├── UnslothDPOTrainer.py
+    │   ├── UnslothGKDTrainer.py
+    │   ├── UnslothGRPOTrainer.py
+    │   ├── UnslothKTOTrainer.py
+    │   ├── UnslothNashMDTrainer.py
+    │   ├── UnslothOnlineDPOTrainer.py
+    │   ├── UnslothORPOTrainer.py
+    │   ├── UnslothPPOTrainer.py
+    │   ├── UnslothPRMTrainer.py
+    │   ├── UnslothRewardTrainer.py
+    │   ├── UnslothRLOOTrainer.py
+    │   ├── UnslothSFTTrainer.py
+    │   └── UnslothXPOTrainer.py
+    └── _unsloth_sentencepiece_temp
+        └── unsloth
+
+266 directories, 1611 files

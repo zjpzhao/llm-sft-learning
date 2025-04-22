@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # -*- coding: utf-8 -*-
 """Llama3.2_(1B_and_3B)-Conversational.ipynb
 
