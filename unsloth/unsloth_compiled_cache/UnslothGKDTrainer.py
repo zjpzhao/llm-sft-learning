@@ -1,3 +1,10 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -34,31 +43,31 @@ def selective_log_softmax(logits, index):
 class UnslothGKDConfig(GKDConfig):
     """
     
-Configuration class for [`GKDTrainer`].
+    Configuration class for [`GKDTrainer`].
 
-Args:
-    temperature (`float`, *optional*, defaults to `0.9`):
-        Temperature for sampling. The higher the temperature, the more random the completions.
-    lmbda (`float`, *optional*, defaults to `0.5`):
-        Lambda parameter that controls the student data fraction (i.e., the proportion of on-policy
-        student-generated outputs).
-    beta (`float`, *optional*, defaults to `0.5`):
-        Interpolation coefficient between `0.0` and `1.0` of the Generalized Jensen-Shannon Divergence loss. When
-        beta is `0.0`, the loss is the KL divergence. When beta is `1.0`, the loss is the Inverse KL Divergence.
-    max_new_tokens (`int`, *optional*, defaults to `128`):
-        Maximum number of tokens to generate per completion.
-    teacher_model_name_or_path (`str` or `None`, *optional*, defaults to `None`):
-        Model name or path of the teacher model. If `None`, the teacher model will be the same as the model
-        being trained.
-    teacher_model_init_kwargs (`dict[str, Any]]` or `None`, *optional*, defaults to `None`):
-        Keyword arguments to pass to `AutoModelForCausalLM.from_pretrained` when instantiating the teacher model
-        from a string.
-    disable_dropout (`bool`, *optional*, defaults to `True`):
-        Whether to disable dropout in the model.
-    seq_kd (`bool`, *optional*, defaults to `False`):
-        Seq_kd parameter that controls whether to perform Sequence-Level KD (can be viewed as supervised FT
-        on teacher-generated output).
-
+    Args:
+        temperature (`float`, *optional*, defaults to `0.9`):
+            Temperature for sampling. The higher the temperature, the more random the completions.
+        lmbda (`float`, *optional*, defaults to `0.5`):
+            Lambda parameter that controls the student data fraction (i.e., the proportion of on-policy
+            student-generated outputs).
+        beta (`float`, *optional*, defaults to `0.5`):
+            Interpolation coefficient between `0.0` and `1.0` of the Generalized Jensen-Shannon Divergence loss. When
+            beta is `0.0`, the loss is the KL divergence. When beta is `1.0`, the loss is the Inverse KL Divergence.
+        max_new_tokens (`int`, *optional*, defaults to `128`):
+            Maximum number of tokens to generate per completion.
+        teacher_model_name_or_path (`str` or `None`, *optional*, defaults to `None`):
+            Model name or path of the teacher model. If `None`, the teacher model will be the same as the model
+            being trained.
+        teacher_model_init_kwargs (`dict[str, Any]]` or `None`, *optional*, defaults to `None`):
+            Keyword arguments to pass to `AutoModelForCausalLM.from_pretrained` when instantiating the teacher model
+            from a string.
+        disable_dropout (`bool`, *optional*, defaults to `True`):
+            Whether to disable dropout in the model.
+        seq_kd (`bool`, *optional*, defaults to `False`):
+            Seq_kd parameter that controls whether to perform Sequence-Level KD (can be viewed as supervised FT
+            on teacher-generated output).
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -176,7 +185,6 @@ Args:
         include_inputs_for_metrics = False,
         eval_do_concat_batches = True,
         fp16_backend = 'auto',
-        evaluation_strategy = None,
         push_to_hub_model_id = None,
         push_to_hub_organization = None,
         push_to_hub_token = None,
@@ -189,8 +197,6 @@ Args:
         torch_compile = False,
         torch_compile_backend = None,
         torch_compile_mode = None,
-        dispatch_batches = None,
-        split_batches = None,
         include_tokens_per_second = False,
         include_num_input_tokens_seen = False,
         neftune_noise_alpha = None,
@@ -201,18 +207,16 @@ Args:
         eval_use_gather_object = False,
         average_tokens_across_devices = False,
         model_init_kwargs = None,
+        use_liger = False,
         dataset_text_field = 'text',
         dataset_kwargs = None,
         dataset_num_proc = None,
-        max_length = 1024,
+        max_seq_length = None,
         packing = False,
-        padding_free = False,
         eval_packing = None,
         dataset_batch_size = None,
         num_of_sequences = None,
         chars_per_token = None,
-        max_seq_length = None,
-        use_liger = None,
         temperature = 0.9,
         lmbda = 0.5,
         beta = 0.5,
@@ -341,7 +345,6 @@ Args:
             include_inputs_for_metrics = include_inputs_for_metrics,
             eval_do_concat_batches = eval_do_concat_batches,
             fp16_backend = fp16_backend,
-            evaluation_strategy = evaluation_strategy,
             push_to_hub_model_id = push_to_hub_model_id,
             push_to_hub_organization = push_to_hub_organization,
             push_to_hub_token = push_to_hub_token,
@@ -354,8 +357,6 @@ Args:
             torch_compile = torch_compile,
             torch_compile_backend = torch_compile_backend,
             torch_compile_mode = torch_compile_mode,
-            dispatch_batches = dispatch_batches,
-            split_batches = split_batches,
             include_tokens_per_second = include_tokens_per_second,
             include_num_input_tokens_seen = include_num_input_tokens_seen,
             neftune_noise_alpha = neftune_noise_alpha,
@@ -366,18 +367,16 @@ Args:
             eval_use_gather_object = eval_use_gather_object,
             average_tokens_across_devices = average_tokens_across_devices,
             model_init_kwargs = model_init_kwargs,
+            use_liger = use_liger,
             dataset_text_field = dataset_text_field,
             dataset_kwargs = dataset_kwargs,
             dataset_num_proc = dataset_num_proc,
-            max_length = max_length,
+            max_seq_length = max_seq_length,
             packing = packing,
-            padding_free = padding_free,
             eval_packing = eval_packing,
             dataset_batch_size = dataset_batch_size,
             num_of_sequences = num_of_sequences,
             chars_per_token = chars_per_token,
-            max_seq_length = max_seq_length,
-            use_liger = use_liger,
             temperature = temperature,
             lmbda = lmbda,
             beta = beta,
@@ -413,7 +412,7 @@ class _UnslothGKDTrainer(SFTTrainer):
     ):
         # add remove_unused_columns=False to the dataclass args
         args.remove_unused_columns = False
-        data_collator = DataCollatorForChatML(tokenizer=processing_class, max_length=args.max_length)
+        data_collator = DataCollatorForChatML(tokenizer=processing_class, max_length=args.max_seq_length)
 
         super().__init__(
             model,
@@ -445,7 +444,10 @@ class _UnslothGKDTrainer(SFTTrainer):
             )
 
         if isinstance(teacher_model, str):
-            teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model, **teacher_model_init_kwargs)
+            if args.use_liger:
+                teacher_model = AutoLigerKernelForCausalLM.from_pretrained(teacher_model, **teacher_model_init_kwargs)
+            else:
+                teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model, **teacher_model_init_kwargs)
 
         # Disable dropout in the model
         if args.disable_dropout:
@@ -515,26 +517,21 @@ class _UnslothGKDTrainer(SFTTrainer):
         student_log_probs = F.log_softmax(student_logits, dim=-1)
         teacher_log_probs = F.log_softmax(teacher_logits, dim=-1)
 
-        if beta == 0:
-            jsd = F.kl_div(student_log_probs, teacher_log_probs, reduction="none", log_target=True)
-        elif beta == 1:
-            jsd = F.kl_div(teacher_log_probs, student_log_probs, reduction="none", log_target=True)
-        else:
-            # Compute the log of the mixture distribution
-            # log(a + b) = log(exp(log(a)) + exp(log(b))) -> for mixture
-            beta = torch.tensor(beta, dtype=student_log_probs.dtype)
-            mixture_log_probs = torch.logsumexp(
-                torch.stack([student_log_probs + torch.log(1 - beta), teacher_log_probs + torch.log(beta)]),
-                dim=0,
-            )
+        # Compute the log of the mixture distribution
+        # log(a + b) = log(exp(log(a)) + exp(log(b))) -> for mixture
+        beta = torch.tensor(beta, dtype=student_log_probs.dtype)
+        mixture_log_probs = torch.logsumexp(
+            torch.stack([student_log_probs + torch.log(beta), teacher_log_probs + torch.log(1 - beta)]),
+            dim=0,
+        )
 
-            # Compute KL divergences using F.kl_div
-            # PyTorch differs from the standard mathematical definition, so the order of the probability distributions is swapped compared to that defined in the paper.
-            kl_teacher = F.kl_div(mixture_log_probs, teacher_log_probs, reduction="none", log_target=True)
-            kl_student = F.kl_div(mixture_log_probs, student_log_probs, reduction="none", log_target=True)
+        # Compute KL divergences using F.kl_div
+        # PyTorch differs from the standard mathematical definition, so the order of the probability distributions is swapped compared to that defined in the paper.
+        kl_teacher = F.kl_div(mixture_log_probs, teacher_log_probs, reduction="none", log_target=True)
+        kl_student = F.kl_div(mixture_log_probs, student_log_probs, reduction="none", log_target=True)
 
-            # Compute the Generalized Jensen-Shannon Divergence
-            jsd = beta * kl_teacher + (1 - beta) * kl_student
+        # Compute the Generalized Jensen-Shannon Divergence
+        jsd = beta * kl_teacher + (1 - beta) * kl_student
 
         # Masking
         if labels is not None:
@@ -750,14 +747,23 @@ class UnslothGKDTrainer(_UnslothGKDTrainer):
         if args is None: args = UnslothGKDConfig()
         use_bf16 = getattr(args, 'bf16', False)
         use_fp16 = getattr(args, 'fp16', False)
+        force_float32 = False
+        if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '1':
+            print('Unsloth: Switching to float32 training since model cannot work with float16')
+            force_float32 = True
+        mixed_precision_dtype = os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32')
         dtype = getattr(model.config, 'torch_dtype', None)
         if dtype is None: dtype = model.get_input_embeddings().dtype
         from unsloth_zoo.utils import _get_dtype
         dtype = _get_dtype(dtype)
         float16 = dtype == torch.float16
-        if float16 and use_bf16: raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
-        if not float16 and use_fp16: raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
-        if not use_bf16 and not use_fp16:
+        if not force_float32 and (float16 and use_bf16): raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
+        if not force_float32 and (not float16 and use_fp16): raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
+        if force_float32:
+            args.fp16 = False
+            args.bf16 = False
+            os.environ['ACCELERATE_MIXED_PRECISION'] = 'no'
+        elif (not use_bf16 and not use_fp16) and mixed_precision_dtype == 'float32':
             args.fp16 = float16
             args.bf16 = not float16
             os.environ['ACCELERATE_MIXED_PRECISION'] = 'fp16' if float16 else 'bf16'
@@ -778,7 +784,20 @@ class UnslothGKDTrainer(_UnslothGKDTrainer):
         bf16_full_eval = getattr(args, 'bf16_full_eval', False)
         if args.fp16 and bf16_full_eval: args.bf16_full_eval = False; args.fp16_full_eval = True
         if args.bf16 and fp16_full_eval: args.bf16_full_eval = True; args.fp16_full_eval = False
-        if not bf16_full_eval and not fp16_full_eval: args.bf16_full_eval = args.bf16; args.fp16_full_eval = args.fp16
+        if force_float32:
+            args.bf16_full_eval = False
+            args.fp16_full_eval = False
+        elif os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32') == 'bfloat16':
+            args.bf16_full_eval = True
+            args.fp16_full_eval = False
+        elif not bf16_full_eval and not fp16_full_eval:
+            args.bf16_full_eval = args.bf16
+            args.fp16_full_eval = args.fp16
+        _output_logits = False
+        if locals().get('compute_metrics', None) is not None: _output_logits = True
+        if locals().get('preprocess_logits_for_metrics', None) is not None: _output_logits = True
+        if _output_logits:
+            os.environ['UNSLOTH_RETURN_LOGITS'] = '1'
         if 'max_seq_length' not in locals() and not hasattr(args, 'max_seq_length'):
             pass
         else:
@@ -793,6 +812,23 @@ class UnslothGKDTrainer(_UnslothGKDTrainer):
         if 'processing_class' in locals():
             if hasattr(processing_class, 'padding_side'): processing_class.padding_side = 'right'
             if hasattr(processing_class, 'tokenizer') and hasattr(processing_class.tokenizer, 'padding_side'): processing_class.tokenizer.padding_side = 'right'
+        __tokenizer = processing_class if 'processing_class' in locals() else tokenizer
+        from unsloth_zoo.vision_utils import UnslothVisionDataCollator
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if isinstance(data_collator, DataCollatorForSeq2Seq) and 'labels' not in train_dataset.column_names:
+                data_collator = DataCollatorForLanguageModeling(__tokenizer, mlm = False)
+            elif isinstance(data_collator, DataCollatorForLanguageModeling) and 'labels' in train_dataset.column_names:
+                data_collator = DataCollatorForSeq2Seq(__tokenizer)
+        else:
+            if hasattr(args, 'remove_unused_columns'): args.remove_unused_columns = False
+            if hasattr(args, 'dataset_text_field'): args.dataset_text_field = ''
+            if hasattr(args, 'dataset_kwargs'): args.dataset_kwargs = {'skip_prepare_dataset': True}
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if not hasattr(__tokenizer, 'pad') and hasattr(__tokenizer, 'tokenizer'):
+                if isinstance(data_collator, DataCollatorForSeq2Seq):
+                    data_collator = DataCollatorForSeq2Seq(__tokenizer.tokenizer)
+                else:
+                    data_collator = DataCollatorForLanguageModeling(__tokenizer.tokenizer, mlm = False)
         other_metrics = []
         
         from unsloth_zoo.logging_utils import PatchRLStatistics

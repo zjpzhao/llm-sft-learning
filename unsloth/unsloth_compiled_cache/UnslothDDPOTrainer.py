@@ -1,3 +1,10 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -34,97 +43,97 @@ def selective_log_softmax(logits, index):
 class UnslothDDPOConfig(DDPOConfig):
     """
     
-Configuration class for the [`DDPOTrainer`].
+    Configuration class for the [`DDPOTrainer`].
 
-Using [`~transformers.HfArgumentParser`] we can turn this class into
-[argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
-command line.
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
 
-Parameters:
-    exp_name (`str`, *optional*, defaults to `os.path.basename(sys.argv[0])[: -len(".py")]`):
-        Name of this experiment (by default is the file name without the extension name).
-    run_name (`str`, *optional*, defaults to `""`):
-        Name of this run.
-    seed (`int`, *optional*, defaults to `0`):
-        Random seed.
-    log_with (`Literal["wandb", "tensorboard"]]` or `None`, *optional*, defaults to `None`):
-        Log with either 'wandb' or 'tensorboard', check
-        https://huggingface.co/docs/accelerate/usage_guides/tracking for more details.
-    tracker_kwargs (`Dict`, *optional*, defaults to `{}`):
-        Keyword arguments for the tracker (e.g. wandb_project).
-    accelerator_kwargs (`Dict`, *optional*, defaults to `{}`):
-        Keyword arguments for the accelerator.
-    project_kwargs (`Dict`, *optional*, defaults to `{}`):
-        Keyword arguments for the accelerator project config (e.g. `logging_dir`).
-    tracker_project_name (`str`, *optional*, defaults to `"trl"`):
-        Name of project to use for tracking.
-    logdir (`str`, *optional*, defaults to `"logs"`):
-        Top-level logging directory for checkpoint saving.
-    num_epochs (`int`, *optional*, defaults to `100`):
-        Number of epochs to train.
-    save_freq (`int`, *optional*, defaults to `1`):
-        Number of epochs between saving model checkpoints.
-    num_checkpoint_limit (`int`, *optional*, defaults to `5`):
-        Number of checkpoints to keep before overwriting old ones.
-    mixed_precision (`str`, *optional*, defaults to `"fp16"`):
-        Mixed precision training.
-    allow_tf32 (`bool`, *optional*, defaults to `True`):
-        Allow `tf32` on Ampere GPUs.
-    resume_from (`str`, *optional*, defaults to `""`):
-        Resume training from a checkpoint.
-    sample_num_steps (`int`, *optional*, defaults to `50`):
-        Number of sampler inference steps.
-    sample_eta (`float`, *optional*, defaults to `1.0`):
-        Eta parameter for the DDIM sampler.
-    sample_guidance_scale (`float`, *optional*, defaults to `5.0`):
-        Classifier-free guidance weight.
-    sample_batch_size (`int`, *optional*, defaults to `1`):
-        Batch size (per GPU) to use for sampling.
-    sample_num_batches_per_epoch (`int`, *optional*, defaults to `2`):
-        Number of batches to sample per epoch.
-    train_batch_size (`int`, *optional*, defaults to `1`):
-        Batch size (per GPU) to use for training.
-    train_use_8bit_adam (`bool`, *optional*, defaults to `False`):
-        Use 8bit Adam optimizer from bitsandbytes.
-    train_learning_rate (`float`, *optional*, defaults to `3e-4`):
-        Learning rate.
-    train_adam_beta1 (`float`, *optional*, defaults to `0.9`):
-        Adam beta1.
-    train_adam_beta2 (`float`, *optional*, defaults to `0.999`):
-        Adam beta2.
-    train_adam_weight_decay (`float`, *optional*, defaults to `1e-4`):
-        Adam weight decay.
-    train_adam_epsilon (`float`, *optional*, defaults to `1e-8`):
-        Adam epsilon.
-    train_gradient_accumulation_steps (`int`, *optional*, defaults to `1`):
-        Number of gradient accumulation steps.
-    train_max_grad_norm (`float`, *optional*, defaults to `1.0`):
-        Maximum gradient norm for gradient clipping.
-    train_num_inner_epochs (`int`, *optional*, defaults to `1`):
-        Number of inner epochs per outer epoch.
-    train_cfg (`bool`, *optional*, defaults to `True`):
-        Whether to use classifier-free guidance during training.
-    train_adv_clip_max (`float`, *optional*, defaults to `5.0`):
-        Clip advantages to the range.
-    train_clip_range (`float`, *optional*, defaults to `1e-4`):
-        PPO clip range.
-    train_timestep_fraction (`float`, *optional*, defaults to `1.0`):
-        Fraction of timesteps to train on.
-    per_prompt_stat_tracking (`bool`, *optional*, defaults to `False`):
-        Whether to track statistics for each prompt separately.
-    per_prompt_stat_tracking_buffer_size (`int`, *optional*, defaults to `16`):
-        Number of reward values to store in the buffer for each prompt.
-    per_prompt_stat_tracking_min_count (`int`, *optional*, defaults to `16`):
-        Minimum number of reward values to store in the buffer.
-    async_reward_computation (`bool`, *optional*, defaults to `False`):
-        Whether to compute rewards asynchronously.
-    max_workers (`int`, *optional*, defaults to `2`):
-        Maximum number of workers to use for async reward computation.
-    negative_prompts (`str`, *optional*, defaults to `""`):
-        Comma-separated list of prompts to use as negative examples.
-    push_to_hub (`bool`, *optional*, defaults to `False`):
-        Whether to push the final model checkpoint to the Hub.
-
+    Parameters:
+        exp_name (`str`, *optional*, defaults to `os.path.basename(sys.argv[0])[: -len(".py")]`):
+            Name of this experiment (by default is the file name without the extension name).
+        run_name (`str`, *optional*, defaults to `""`):
+            Name of this run.
+        seed (`int`, *optional*, defaults to `0`):
+            Random seed.
+        log_with (`Literal["wandb", "tensorboard"]]` or `None`, *optional*, defaults to `None`):
+            Log with either 'wandb' or 'tensorboard', check
+            https://huggingface.co/docs/accelerate/usage_guides/tracking for more details.
+        tracker_kwargs (`Dict`, *optional*, defaults to `{}`):
+            Keyword arguments for the tracker (e.g. wandb_project).
+        accelerator_kwargs (`Dict`, *optional*, defaults to `{}`):
+            Keyword arguments for the accelerator.
+        project_kwargs (`Dict`, *optional*, defaults to `{}`):
+            Keyword arguments for the accelerator project config (e.g. `logging_dir`).
+        tracker_project_name (`str`, *optional*, defaults to `"trl"`):
+            Name of project to use for tracking.
+        logdir (`str`, *optional*, defaults to `"logs"`):
+            Top-level logging directory for checkpoint saving.
+        num_epochs (`int`, *optional*, defaults to `100`):
+            Number of epochs to train.
+        save_freq (`int`, *optional*, defaults to `1`):
+            Number of epochs between saving model checkpoints.
+        num_checkpoint_limit (`int`, *optional*, defaults to `5`):
+            Number of checkpoints to keep before overwriting old ones.
+        mixed_precision (`str`, *optional*, defaults to `"fp16"`):
+            Mixed precision training.
+        allow_tf32 (`bool`, *optional*, defaults to `True`):
+            Allow `tf32` on Ampere GPUs.
+        resume_from (`str`, *optional*, defaults to `""`):
+            Resume training from a checkpoint.
+        sample_num_steps (`int`, *optional*, defaults to `50`):
+            Number of sampler inference steps.
+        sample_eta (`float`, *optional*, defaults to `1.0`):
+            Eta parameter for the DDIM sampler.
+        sample_guidance_scale (`float`, *optional*, defaults to `5.0`):
+            Classifier-free guidance weight.
+        sample_batch_size (`int`, *optional*, defaults to `1`):
+            Batch size (per GPU) to use for sampling.
+        sample_num_batches_per_epoch (`int`, *optional*, defaults to `2`):
+            Number of batches to sample per epoch.
+        train_batch_size (`int`, *optional*, defaults to `1`):
+            Batch size (per GPU) to use for training.
+        train_use_8bit_adam (`bool`, *optional*, defaults to `False`):
+            Use 8bit Adam optimizer from bitsandbytes.
+        train_learning_rate (`float`, *optional*, defaults to `3e-4`):
+            Learning rate.
+        train_adam_beta1 (`float`, *optional*, defaults to `0.9`):
+            Adam beta1.
+        train_adam_beta2 (`float`, *optional*, defaults to `0.999`):
+            Adam beta2.
+        train_adam_weight_decay (`float`, *optional*, defaults to `1e-4`):
+            Adam weight decay.
+        train_adam_epsilon (`float`, *optional*, defaults to `1e-8`):
+            Adam epsilon.
+        train_gradient_accumulation_steps (`int`, *optional*, defaults to `1`):
+            Number of gradient accumulation steps.
+        train_max_grad_norm (`float`, *optional*, defaults to `1.0`):
+            Maximum gradient norm for gradient clipping.
+        train_num_inner_epochs (`int`, *optional*, defaults to `1`):
+            Number of inner epochs per outer epoch.
+        train_cfg (`bool`, *optional*, defaults to `True`):
+            Whether to use classifier-free guidance during training.
+        train_adv_clip_max (`float`, *optional*, defaults to `5.0`):
+            Clip advantages to the range.
+        train_clip_range (`float`, *optional*, defaults to `1e-4`):
+            PPO clip range.
+        train_timestep_fraction (`float`, *optional*, defaults to `1.0`):
+            Fraction of timesteps to train on.
+        per_prompt_stat_tracking (`bool`, *optional*, defaults to `False`):
+            Whether to track statistics for each prompt separately.
+        per_prompt_stat_tracking_buffer_size (`int`, *optional*, defaults to `16`):
+            Number of reward values to store in the buffer for each prompt.
+        per_prompt_stat_tracking_min_count (`int`, *optional*, defaults to `16`):
+            Minimum number of reward values to store in the buffer.
+        async_reward_computation (`bool`, *optional*, defaults to `False`):
+            Whether to compute rewards asynchronously.
+        max_workers (`int`, *optional*, defaults to `2`):
+            Maximum number of workers to use for async reward computation.
+        negative_prompts (`str`, *optional*, defaults to `""`):
+            Comma-separated list of prompts to use as negative examples.
+        push_to_hub (`bool`, *optional*, defaults to `False`):
+            Whether to push the final model checkpoint to the Hub.
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -223,19 +232,7 @@ Parameters:
 pass
 
 class _UnslothDDPOTrainer(PyTorchModelHubMixin):
-    """
-    The DDPOTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
-    Note, this trainer is heavily inspired by the work here: https://github.com/kvablack/ddpo-pytorch
-    As of now only Stable Diffusion based pipelines are supported
-
-    Attributes:
-        **config** (`DDPOConfig`) -- Configuration object for DDPOTrainer. Check the documentation of `PPOConfig` for more
-         details.
-        **reward_function** (Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]) -- Reward function to be used
-        **prompt_function** (Callable[[], tuple[str, Any]]) -- Function to generate prompts to guide model
-        **sd_pipeline** (`DDPOStableDiffusionPipeline`) -- Stable Diffusion pipeline to be used for training.
-        **image_samples_hook** (Optional[Callable[[Any, Any, Any], Any]]) -- Hook to be called to log images
-    """
+    """"""
 
     _tag_names = ["trl", "ddpo"]
 
@@ -837,18 +834,18 @@ class _UnslothDDPOTrainer(PyTorchModelHubMixin):
 class UnslothDDPOTrainer(_UnslothDDPOTrainer):
     """
     
-The DDPOTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
-Note, this trainer is heavily inspired by the work here: https://github.com/kvablack/ddpo-pytorch
-As of now only Stable Diffusion based pipelines are supported
+    The DDPOTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
+    Note, this trainer is heavily inspired by the work here: https://github.com/kvablack/ddpo-pytorch
+    As of now only Stable Diffusion based pipelines are supported
 
-Attributes:
-    **config** (`DDPOConfig`) -- Configuration object for DDPOTrainer. Check the documentation of `PPOConfig` for more
-     details.
-    **reward_function** (Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]) -- Reward function to be used
-    **prompt_function** (Callable[[], tuple[str, Any]]) -- Function to generate prompts to guide model
-    **sd_pipeline** (`DDPOStableDiffusionPipeline`) -- Stable Diffusion pipeline to be used for training.
-    **image_samples_hook** (Optional[Callable[[Any, Any, Any], Any]]) -- Hook to be called to log images
-
+    Attributes:
+        **config** (`DDPOConfig`) -- Configuration object for DDPOTrainer. Check the documentation of `PPOConfig` for more
+         details.
+        **reward_function** (Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]) -- Reward function to be used
+        **prompt_function** (Callable[[], tuple[str, Any]]) -- Function to generate prompts to guide model
+        **sd_pipeline** (`DDPOStableDiffusionPipeline`) -- Stable Diffusion pipeline to be used for training.
+        **image_samples_hook** (Optional[Callable[[Any, Any, Any], Any]]) -- Hook to be called to log images
+    
     """
     def __init__(
         self,

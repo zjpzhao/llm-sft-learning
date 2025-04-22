@@ -1,3 +1,10 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -34,62 +43,62 @@ def selective_log_softmax(logits, index):
 class UnslothCPOConfig(CPOConfig):
     """
     
-Configuration class for the [`CPOTrainer`].
+    Configuration class for the [`CPOTrainer`].
 
-Using [`~transformers.HfArgumentParser`] we can turn this class into
-[argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
-command line.
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
 
-Parameters:
-    learning_rate (`float`, *optional*, defaults to `1e-6`):
-        Initial learning rate for [`AdamW`] optimizer. The default value replaces that of
-        [`~transformers.TrainingArguments`].
-    max_length (`int` or `None`, *optional*, defaults to `1024`):
-        Maximum length of the sequences (prompt + completion) in the batch. This argument is required if you want
-        to use the default data collator.
-    max_prompt_length (`int` or `None`, *optional*, defaults to `512`):
-        Maximum length of the prompt. This argument is required if you want to use the default data collator.
-    max_completion_length (`int` or `None`, *optional*, defaults to `None`):
-        Maximum length of the completion. This argument is required if you want to use the default data collator
-        and your model is an encoder-decoder.
-    beta (`float`, *optional*, defaults to `0.1`):
-        Parameter controlling the deviation from the reference model. Higher β means less deviation from the
-        reference model. For the IPO loss (`loss_type="ipo"`), β is the regularization parameter denoted by τ in
-        the [paper](https://huggingface.co/papers/2310.12036).
-    label_smoothing (`float`, *optional*, defaults to `0.0`):
-        Label smoothing factor. This argument is required if you want to use the default data collator.
-    loss_type (`str`, *optional*, defaults to `"sigmoid"`):
-        Type of loss to use. Possible values are:
+    Parameters:
+        learning_rate (`float`, *optional*, defaults to `1e-6`):
+            Initial learning rate for [`AdamW`] optimizer. The default value replaces that of
+            [`~transformers.TrainingArguments`].
+        max_length (`int` or `None`, *optional*, defaults to `1024`):
+            Maximum length of the sequences (prompt + completion) in the batch. This argument is required if you want
+            to use the default data collator.
+        max_prompt_length (`int` or `None`, *optional*, defaults to `512`):
+            Maximum length of the prompt. This argument is required if you want to use the default data collator.
+        max_completion_length (`int` or `None`, *optional*, defaults to `None`):
+            Maximum length of the completion. This argument is required if you want to use the default data collator
+            and your model is an encoder-decoder.
+        beta (`float`, *optional*, defaults to `0.1`):
+            Parameter controlling the deviation from the reference model. Higher β means less deviation from the
+            reference model. For the IPO loss (`loss_type="ipo"`), β is the regularization parameter denoted by τ in
+            the [paper](https://huggingface.co/papers/2310.12036).
+        label_smoothing (`float`, *optional*, defaults to `0.0`):
+            Label smoothing factor. This argument is required if you want to use the default data collator.
+        loss_type (`str`, *optional*, defaults to `"sigmoid"`):
+            Type of loss to use. Possible values are:
 
-            - `"sigmoid"`: sigmoid loss from the original [DPO](https://huggingface.co/papers/2305.18290) paper.
-            - `"hinge"`: hinge loss on the normalized likelihood from the [SLiC](https://huggingface.co/papers/2305.10425) paper.
-            - `"ipo"`: IPO loss from the [IPO](https://huggingface.co/papers/2310.12036) paper.
-            - `"simpo"`: SimPO loss from the [SimPO](https://huggingface.co/papers/2405.14734) paper.
+                - `"sigmoid"`: sigmoid loss from the original [DPO](https://huggingface.co/papers/2305.18290) paper.
+                - `"hinge"`: hinge loss on the normalized likelihood from the [SLiC](https://huggingface.co/papers/2305.10425) paper.
+                - `"ipo"`: IPO loss from the [IPO](https://huggingface.co/papers/2310.12036) paper.
+                - `"simpo"`: SimPO loss from the [SimPO](https://huggingface.co/papers/2405.14734) paper.
 
-    disable_dropout (`bool`, *optional*, defaults to `True`):
-        Whether to disable dropout in the model.
-    cpo_alpha (`float`, *optional*, defaults to `1.0`):
-        Weight of the BC regularizer in CPO training.
-    simpo_gamma (`float`, *optional*, defaults to `0.5`):
-        Target reward margin for the SimPO loss, used only when the `loss_type="simpo"`.
-    label_pad_token_id (`int`, *optional*, defaults to `-100`):
-        Label pad token id. This argument is required if you want to use the default data collator.
-    padding_value (`int` or `None`, *optional*, defaults to `None`):
-        Padding value to use. If `None`, the padding value of the tokenizer is used.
-    truncation_mode (`str`,*optional*,  defaults to `"keep_end"`):
-        Truncation mode to use when the prompt is too long. Possible values are `"keep_end"` or `"keep_start"`.
-        This argument is required if you want to use the default data collator.
-    generate_during_eval (`bool`, *optional*, defaults to `False`):
-        If `True`, generates and logs completions from the model to W&B or Comet during evaluation.
-    is_encoder_decoder (`bool` or `None`, *optional*, defaults to `None`):
-        When using the `model_init` argument (callable) to instantiate the model instead of the `model` argument,
-        you need to specify if the model returned by the callable is an encoder-decoder model.
-    model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
-        Keyword arguments to pass to `AutoModelForCausalLM.from_pretrained` when instantiating the model from a
-        string.
-    dataset_num_proc (`int` or `None`, *optional*, defaults to `None`):
-        Number of processes to use for processing the dataset.
-
+        disable_dropout (`bool`, *optional*, defaults to `True`):
+            Whether to disable dropout in the model.
+        cpo_alpha (`float`, *optional*, defaults to `1.0`):
+            Weight of the BC regularizer in CPO training.
+        simpo_gamma (`float`, *optional*, defaults to `0.5`):
+            Target reward margin for the SimPO loss, used only when the `loss_type="simpo"`.
+        label_pad_token_id (`int`, *optional*, defaults to `-100`):
+            Label pad token id. This argument is required if you want to use the default data collator.
+        padding_value (`int` or `None`, *optional*, defaults to `None`):
+            Padding value to use. If `None`, the padding value of the tokenizer is used.
+        truncation_mode (`str`,*optional*,  defaults to `"keep_end"`):
+            Truncation mode to use when the prompt is too long. Possible values are `"keep_end"` or `"keep_start"`.
+            This argument is required if you want to use the default data collator.
+        generate_during_eval (`bool`, *optional*, defaults to `False`):
+            If `True`, generates and logs completions from the model to W&B or Comet during evaluation.
+        is_encoder_decoder (`bool` or `None`, *optional*, defaults to `None`):
+            When using the `model_init` argument (callable) to instantiate the model instead of the `model` argument,
+            you need to specify if the model returned by the callable is an encoder-decoder model.
+        model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
+            Keyword arguments to pass to `AutoModelForCausalLM.from_pretrained` when instantiating the model from a
+            string.
+        dataset_num_proc (`int` or `None`, *optional*, defaults to `None`):
+            Number of processes to use for processing the dataset.
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -207,7 +216,6 @@ Parameters:
         include_inputs_for_metrics = False,
         eval_do_concat_batches = True,
         fp16_backend = 'auto',
-        evaluation_strategy = None,
         push_to_hub_model_id = None,
         push_to_hub_organization = None,
         push_to_hub_token = None,
@@ -220,8 +228,6 @@ Parameters:
         torch_compile = False,
         torch_compile_backend = None,
         torch_compile_mode = None,
-        dispatch_batches = None,
-        split_batches = None,
         include_tokens_per_second = False,
         include_num_input_tokens_seen = False,
         neftune_noise_alpha = None,
@@ -367,7 +373,6 @@ Parameters:
             include_inputs_for_metrics = include_inputs_for_metrics,
             eval_do_concat_batches = eval_do_concat_batches,
             fp16_backend = fp16_backend,
-            evaluation_strategy = evaluation_strategy,
             push_to_hub_model_id = push_to_hub_model_id,
             push_to_hub_organization = push_to_hub_organization,
             push_to_hub_token = push_to_hub_token,
@@ -380,8 +385,6 @@ Parameters:
             torch_compile = torch_compile,
             torch_compile_backend = torch_compile_backend,
             torch_compile_mode = torch_compile_mode,
-            dispatch_batches = dispatch_batches,
-            split_batches = split_batches,
             include_tokens_per_second = include_tokens_per_second,
             include_num_input_tokens_seen = include_num_input_tokens_seen,
             neftune_noise_alpha = neftune_noise_alpha,
@@ -412,39 +415,7 @@ Parameters:
 pass
 
 class _UnslothCPOTrainer(Trainer):
-    r"""
-    Initialize CPOTrainer.
-
-    Args:
-        model (`transformers.PreTrainedModel`):
-            The model to train, preferably an `AutoModelForSequenceClassification`.
-        args (`CPOConfig`):
-            The CPO config arguments to use for training.
-        data_collator (`transformers.DataCollator`):
-            The data collator to use for training. If None is specified, the default data collator (`DPODataCollatorWithPadding`) will be used
-            which will pad the sequences to the maximum length of the sequences in the batch, given a dataset of paired sequences.
-        train_dataset (`datasets.Dataset`):
-            The dataset to use for training.
-        eval_dataset (`datasets.Dataset`):
-            The dataset to use for evaluation.
-        processing_class (`PreTrainedTokenizerBase` or `BaseImageProcessor` or `FeatureExtractionMixin` or `ProcessorMixin`, *optional*):
-            Processing class used to process the data. If provided, will be used to automatically process the inputs
-            for the model, and it will be saved along the model to make it easier to rerun an interrupted training or
-            reuse the fine-tuned model.
-        model_init (`Callable[[], transformers.PreTrainedModel]`):
-            The model initializer to use for training. If None is specified, the default model initializer will be used.
-        callbacks (`list[transformers.TrainerCallback]`):
-            The callbacks to use for training.
-        optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`):
-            The optimizer and scheduler to use for training.
-        preprocess_logits_for_metrics (`Callable[[torch.Tensor, torch.Tensor], torch.Tensor]`):
-            The function to use to preprocess the logits before computing the metrics.
-        peft_config (`dict`, defaults to `None`):
-            The PEFT configuration to use for training. If you pass a PEFT configuration, the model will be wrapped in a PEFT model.
-        compute_metrics (`Callable[[EvalPrediction], dict]`, *optional*):
-            The function to use to compute the metrics. Must take a `EvalPrediction` and return
-            a dictionary string to metric values.
-    """
+    r""""""
 
     _tag_names = ["trl", "cpo"]
 
@@ -664,7 +635,7 @@ class _UnslothCPOTrainer(Trainer):
 
         # Compute that only on the main process for faster data processing.
         # see: https://github.com/huggingface/trl/pull/1255
-        with PartialState().main_process_first():
+        with PartialState().local_main_process_first():
             # Extract the prompt if needed, and apply the chat template if needed
             train_dataset = train_dataset.map(maybe_extract_prompt, num_proc=args.dataset_num_proc)
             train_dataset = train_dataset.map(
@@ -1256,8 +1227,8 @@ class _UnslothCPOTrainer(Trainer):
             "eval_logits/chosen": metrics["eval_logits/chosen"],
             "eval_logits/rejected": metrics["eval_logits/rejected"],
         }
-        logits = [v for k, v in logits_dict.items() if k not in ignore_keys]
-        logits = torch.tensor(logits, device=self.accelerator.device)
+        logits = tuple(v.unsqueeze(dim=0) for k, v in logits_dict.items() if k not in ignore_keys)
+        logits = torch.stack(logits).mean(axis=1).to(self.accelerator.device)
         labels = torch.zeros(logits.shape[0], device=self.accelerator.device)
 
         return (loss.detach(), logits, labels)
@@ -1420,38 +1391,38 @@ class _UnslothCPOTrainer(Trainer):
 class UnslothCPOTrainer(_UnslothCPOTrainer):
     """
     
-Initialize CPOTrainer.
+    Initialize CPOTrainer.
 
-Args:
-    model (`transformers.PreTrainedModel`):
-        The model to train, preferably an `AutoModelForSequenceClassification`.
-    args (`CPOConfig`):
-        The CPO config arguments to use for training.
-    data_collator (`transformers.DataCollator`):
-        The data collator to use for training. If None is specified, the default data collator (`DPODataCollatorWithPadding`) will be used
-        which will pad the sequences to the maximum length of the sequences in the batch, given a dataset of paired sequences.
-    train_dataset (`datasets.Dataset`):
-        The dataset to use for training.
-    eval_dataset (`datasets.Dataset`):
-        The dataset to use for evaluation.
-    processing_class (`PreTrainedTokenizerBase` or `BaseImageProcessor` or `FeatureExtractionMixin` or `ProcessorMixin`, *optional*):
-        Processing class used to process the data. If provided, will be used to automatically process the inputs
-        for the model, and it will be saved along the model to make it easier to rerun an interrupted training or
-        reuse the fine-tuned model.
-    model_init (`Callable[[], transformers.PreTrainedModel]`):
-        The model initializer to use for training. If None is specified, the default model initializer will be used.
-    callbacks (`list[transformers.TrainerCallback]`):
-        The callbacks to use for training.
-    optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`):
-        The optimizer and scheduler to use for training.
-    preprocess_logits_for_metrics (`Callable[[torch.Tensor, torch.Tensor], torch.Tensor]`):
-        The function to use to preprocess the logits before computing the metrics.
-    peft_config (`dict`, defaults to `None`):
-        The PEFT configuration to use for training. If you pass a PEFT configuration, the model will be wrapped in a PEFT model.
-    compute_metrics (`Callable[[EvalPrediction], dict]`, *optional*):
-        The function to use to compute the metrics. Must take a `EvalPrediction` and return
-        a dictionary string to metric values.
-
+    Args:
+        model (`transformers.PreTrainedModel`):
+            The model to train, preferably an `AutoModelForSequenceClassification`.
+        args (`CPOConfig`):
+            The CPO config arguments to use for training.
+        data_collator (`transformers.DataCollator`):
+            The data collator to use for training. If None is specified, the default data collator (`DPODataCollatorWithPadding`) will be used
+            which will pad the sequences to the maximum length of the sequences in the batch, given a dataset of paired sequences.
+        train_dataset (`datasets.Dataset`):
+            The dataset to use for training.
+        eval_dataset (`datasets.Dataset`):
+            The dataset to use for evaluation.
+        processing_class (`PreTrainedTokenizerBase` or `BaseImageProcessor` or `FeatureExtractionMixin` or `ProcessorMixin`, *optional*):
+            Processing class used to process the data. If provided, will be used to automatically process the inputs
+            for the model, and it will be saved along the model to make it easier to rerun an interrupted training or
+            reuse the fine-tuned model.
+        model_init (`Callable[[], transformers.PreTrainedModel]`):
+            The model initializer to use for training. If None is specified, the default model initializer will be used.
+        callbacks (`list[transformers.TrainerCallback]`):
+            The callbacks to use for training.
+        optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`):
+            The optimizer and scheduler to use for training.
+        preprocess_logits_for_metrics (`Callable[[torch.Tensor, torch.Tensor], torch.Tensor]`):
+            The function to use to preprocess the logits before computing the metrics.
+        peft_config (`dict`, defaults to `None`):
+            The PEFT configuration to use for training. If you pass a PEFT configuration, the model will be wrapped in a PEFT model.
+        compute_metrics (`Callable[[EvalPrediction], dict]`, *optional*):
+            The function to use to compute the metrics. Must take a `EvalPrediction` and return
+            a dictionary string to metric values.
+    
     """
     def __init__(
         self,
@@ -1471,14 +1442,23 @@ Args:
         if args is None: args = UnslothCPOConfig()
         use_bf16 = getattr(args, 'bf16', False)
         use_fp16 = getattr(args, 'fp16', False)
+        force_float32 = False
+        if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '1':
+            print('Unsloth: Switching to float32 training since model cannot work with float16')
+            force_float32 = True
+        mixed_precision_dtype = os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32')
         dtype = getattr(model.config, 'torch_dtype', None)
         if dtype is None: dtype = model.get_input_embeddings().dtype
         from unsloth_zoo.utils import _get_dtype
         dtype = _get_dtype(dtype)
         float16 = dtype == torch.float16
-        if float16 and use_bf16: raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
-        if not float16 and use_fp16: raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
-        if not use_bf16 and not use_fp16:
+        if not force_float32 and (float16 and use_bf16): raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
+        if not force_float32 and (not float16 and use_fp16): raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
+        if force_float32:
+            args.fp16 = False
+            args.bf16 = False
+            os.environ['ACCELERATE_MIXED_PRECISION'] = 'no'
+        elif (not use_bf16 and not use_fp16) and mixed_precision_dtype == 'float32':
             args.fp16 = float16
             args.bf16 = not float16
             os.environ['ACCELERATE_MIXED_PRECISION'] = 'fp16' if float16 else 'bf16'
@@ -1499,7 +1479,20 @@ Args:
         bf16_full_eval = getattr(args, 'bf16_full_eval', False)
         if args.fp16 and bf16_full_eval: args.bf16_full_eval = False; args.fp16_full_eval = True
         if args.bf16 and fp16_full_eval: args.bf16_full_eval = True; args.fp16_full_eval = False
-        if not bf16_full_eval and not fp16_full_eval: args.bf16_full_eval = args.bf16; args.fp16_full_eval = args.fp16
+        if force_float32:
+            args.bf16_full_eval = False
+            args.fp16_full_eval = False
+        elif os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32') == 'bfloat16':
+            args.bf16_full_eval = True
+            args.fp16_full_eval = False
+        elif not bf16_full_eval and not fp16_full_eval:
+            args.bf16_full_eval = args.bf16
+            args.fp16_full_eval = args.fp16
+        _output_logits = False
+        if locals().get('compute_metrics', None) is not None: _output_logits = True
+        if locals().get('preprocess_logits_for_metrics', None) is not None: _output_logits = True
+        if _output_logits:
+            os.environ['UNSLOTH_RETURN_LOGITS'] = '1'
         if 'max_seq_length' not in locals() and not hasattr(args, 'max_seq_length'):
             pass
         else:
@@ -1514,6 +1507,23 @@ Args:
         if 'processing_class' in locals():
             if hasattr(processing_class, 'padding_side'): processing_class.padding_side = 'right'
             if hasattr(processing_class, 'tokenizer') and hasattr(processing_class.tokenizer, 'padding_side'): processing_class.tokenizer.padding_side = 'right'
+        __tokenizer = processing_class if 'processing_class' in locals() else tokenizer
+        from unsloth_zoo.vision_utils import UnslothVisionDataCollator
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if isinstance(data_collator, DataCollatorForSeq2Seq) and 'labels' not in train_dataset.column_names:
+                data_collator = DataCollatorForLanguageModeling(__tokenizer, mlm = False)
+            elif isinstance(data_collator, DataCollatorForLanguageModeling) and 'labels' in train_dataset.column_names:
+                data_collator = DataCollatorForSeq2Seq(__tokenizer)
+        else:
+            if hasattr(args, 'remove_unused_columns'): args.remove_unused_columns = False
+            if hasattr(args, 'dataset_text_field'): args.dataset_text_field = ''
+            if hasattr(args, 'dataset_kwargs'): args.dataset_kwargs = {'skip_prepare_dataset': True}
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if not hasattr(__tokenizer, 'pad') and hasattr(__tokenizer, 'tokenizer'):
+                if isinstance(data_collator, DataCollatorForSeq2Seq):
+                    data_collator = DataCollatorForSeq2Seq(__tokenizer.tokenizer)
+                else:
+                    data_collator = DataCollatorForLanguageModeling(__tokenizer.tokenizer, mlm = False)
         other_metrics = []
         
         from unsloth_zoo.logging_utils import PatchRLStatistics

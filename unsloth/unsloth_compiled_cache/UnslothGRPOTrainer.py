@@ -1,8 +1,15 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from trl.trainer.grpo_trainer import (Any, AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer, Dataset, GRPOConfig, GRPOTrainer, GenerationConfig, IterableDataset, Optional, PeftConfig, PreTrainedModel, PreTrainedTokenizerBase, RepeatRandomSampler, RewardFunc, Sampler, SyncRefModelCallback, Trainer, TrainerCallback, Union, VLLMClient, apply_chat_template, broadcast_object_list, create_reference_model, defaultdict, gather, gather_object, generate_model_card, get_comet_experiment_url, is_conversational, is_deepspeed_zero3_enabled, is_peft_available, is_peft_model, is_rich_available, is_vllm_available, is_wandb_available, maybe_apply_chat_template, nn, nullcontext, os, pad, prepare_deepspeed, print_prompt_completions_sample, profiling_context, profiling_decorator, set_seed, textwrap, torch, transformers, unwrap_model_for_generation, version, warnings, os, torch, transformers, GRPOTrainer, Trainer, gather, os, torch)
+from trl.trainer.grpo_trainer import (Any, AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer, Dataset, GRPOConfig, GRPOTrainer, GenerationConfig, IterableDataset, Optional, PeftConfig, PreTrainedModel, PreTrainedTokenizerBase, RepeatRandomSampler, RewardFunc, Sampler, SyncRefModelCallback, Trainer, TrainerCallback, Union, apply_chat_template, broadcast_object_list, create_reference_model, defaultdict, gather, gather_object, generate_model_card, get_comet_experiment_url, is_conversational, is_deepspeed_zero3_enabled, is_peft_model, is_wandb_available, maybe_apply_chat_template, nn, os, pad, prepare_deepspeed, set_seed, textwrap, torch, transformers, unwrap_model_for_generation, version, warnings, os, torch, transformers, Any, Union, apply_chat_template, broadcast_object_list, gather, gather_object, is_conversational, maybe_apply_chat_template, nn, os, pad, torch, unwrap_model_for_generation, GRPOTrainer, Trainer, gather, os, torch)
 
 
 import os
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -60,9 +69,9 @@ def grpo_compute_loss(old_logits, new_logits, input_ids, mask, beta, advantages)
     n_mask_per_reward = mask.sum(1)
 
     # See https://github.com/huggingface/trl/pull/2881
-    # loss_per_reward = (loss_i * mask).sum(1) / n_mask_per_reward
-    # loss = loss_per_reward.mean()
-    loss = (loss_i * mask).sum() / mask.sum()
+    loss_per_reward = (loss_i * mask).sum(1) / n_mask_per_reward
+    loss = loss_per_reward.mean()
+    # loss = (loss_i * mask).sum() / mask.sum()
     
     # Get metrics as well which are folded
     with torch.inference_mode():
@@ -113,7 +122,7 @@ class UnslothEfficientGRPO(torch.autograd.Function):
             fullgraph = True,
             options = torch_compile_options,
         )
-        
+
         grad_inputs_chunks = torch.chunk(grad_inputs,        chunks = n_chunks, dim = 0)
         new_hidden_states  = torch.chunk(_new_hidden_states, chunks = n_chunks, dim = 0)
         old_hidden_states  = torch.chunk(_old_hidden_states, chunks = n_chunks, dim = 0)
@@ -205,123 +214,146 @@ def grpo_accumulated_loss(
         )
         return loss, completion_length, mean_kl
     pass
+
+@torch.compile(dynamic = True, fullgraph = True, options = torch_compile_options)
+def grpo_compute_loss_slow(old_logits, new_logits, input_ids, mask, beta, advantages):
+    # All Unsloth Zoo code licensed under LGPLv3
+    old_logits = old_logits.to(torch.float32)
+    new_logits = new_logits.to(torch.float32)
+    input_ids  = input_ids.unsqueeze(-1)
+
+    # x_i - logsumexp(x_i)
+    old_x = torch.gather(old_logits, dim = -1, index = input_ids).squeeze(-1)
+    new_x = torch.gather(new_logits, dim = -1, index = input_ids).squeeze(-1)
+    old = old_x - torch.logsumexp(old_logits, dim = -1)
+    new = new_x - torch.logsumexp(new_logits, dim = -1)
+
+    # Reverse KL
+    kl_i = torch.exp(old - new) - (old - new) - 1.0
+    # Full correct reverse KL divergence?? Missing term maybe?
+    # kl_i = torch.exp(new) * kl_i
+
+    # Below is forward KL (normal KL)
+    # kl_i = torch.exp(old) * (old - new)
+
+    # Must detach - otherwise gradients are not propagated correctly!
+    # exp(x - x) == 1
+    loss_i = torch.exp(new - new.detach()) * advantages.unsqueeze(1)
+    loss_i = -(loss_i - beta * kl_i)
+
+    mask = mask.to(torch.float32)
+    n_mask_per_reward = mask.sum(1)
+
+    # See https://github.com/huggingface/trl/pull/2881
+    loss_per_reward = (loss_i * mask).sum(1) / n_mask_per_reward
+    loss = loss_per_reward.mean()
+    # loss = (loss_i * mask).sum() / mask.sum()
+    
+    # Get metrics as well which are folded
+    with torch.inference_mode():
+        completion_length = n_mask_per_reward.mean()
+        mean_kl_per_reward = (kl_i * mask).sum(1) / n_mask_per_reward
+        mean_kl = mean_kl_per_reward.mean()
+    pass
+    return loss, completion_length, mean_kl
+
+def vLLMSamplingParams(**kwargs):
+    from vllm import SamplingParams
+    sampling_params = SamplingParams(**kwargs)
+    sampling_params._set_kwargs = kwargs
+    return sampling_params
 @dataclass
 class UnslothGRPOConfig(GRPOConfig):
     """
     
-Configuration class for the [`GRPOTrainer`].
+    Configuration class for the [`GRPOTrainer`].
 
-Only the parameters specific to GRPO training are listed here. For details on other parameters, refer to the
-[`~transformers.TrainingArguments`] documentation.
+    Only the parameters specific to GRPO training are listed here. For details on other parameters, refer to the
+    [`~transformers.TrainingArguments`] documentation.
 
-Using [`~transformers.HfArgumentParser`] we can turn this class into
-[argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
-command line.
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
 
-Parameters:
-    > Parameters that control the model and reference model
+    Parameters:
+        > Parameters that control the model and reference model
 
-    model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
-        Keyword arguments for [`~transformers.AutoModelForCausalLM.from_pretrained`], used when the `model`
-        argument of the [`GRPOTrainer`] is provided as a string.
+        model_init_kwargs (`dict[str, Any]` or `None`, *optional*, defaults to `None`):
+            Keyword arguments for [`~transformers.AutoModelForCausalLM.from_pretrained`], used when the `model`
+            argument of the [`GRPOTrainer`] is provided as a string.
 
-    > Parameters that control the data preprocessing
+        > Parameters that control the data preprocessing
 
-    remove_unused_columns (`bool`, *optional*, defaults to `False`):
-        Whether to only keep the column `"prompt"` in the dataset. If you use a custom reward function that
-        requires any column other than `"prompts"` and `"completions"`, you should keep this to `False`.
-    max_prompt_length (`int` or `None`, *optional*, defaults to `512`):
-        Maximum length of the prompt. If the prompt is longer than this value, it will be truncated left.
-    num_generations (`int` or `None`, *optional*, defaults to `8`):
-        Number of generations per prompt to sample. The global batch size (num_processes * per_device_batch_size)
-        must be divisible by this value.
-    max_completion_length (`int` or `None`, *optional*, defaults to `256`):
-        Maximum length of the generated completion.
-    ds3_gather_for_generation (`bool`, *optional*, defaults to `True`):
-        This setting applies to DeepSpeed ZeRO-3. If enabled, the policy model weights are gathered for generation,
-        improving generation speed. However, disabling this option allows training models that exceed the VRAM
-        capacity of a single GPU, albeit at the cost of slower generation. Disabling this option is not compatible
-        with vLLM generation.
+        remove_unused_columns (`bool`, *optional*, defaults to `False`):
+            Whether to only keep the column `"prompt"` in the dataset. If you use a custom reward function that
+            requires any column other than `"prompts"` and `"completions"`, you should keep this to `False`.
+        max_prompt_length (`int` or `None`, *optional*, defaults to `512`):
+            Maximum length of the prompt. If the prompt is longer than this value, it will be truncated left.
+        num_generations (`int` or `None`, *optional*, defaults to `8`):
+            Number of generations per prompt to sample. The global batch size (num_processes * per_device_batch_size)
+            must be divisible by this value.
+        temperature (`float`, *optional*, defaults to `0.9`):
+            Temperature for sampling. The higher the temperature, the more random the completions.
+        max_completion_length (`int` or `None`, *optional*, defaults to `256`):
+            Maximum length of the generated completion.
+        ds3_gather_for_generation (`bool`, *optional*, defaults to `True`):
+            This setting applies to DeepSpeed ZeRO-3. If enabled, the policy model weights are gathered for generation,
+            improving generation speed. However, disabling this option allows training models that exceed the VRAM
+            capacity of a single GPU, albeit at the cost of slower generation. Disabling this option is not compatible
+            with vLLM generation.
 
-    > Parameters that control generation
+        > Parameters that control generation acceleration powered by vLLM
 
-    temperature (`float`, defaults to `0.9`):
-        Temperature for sampling. The higher the temperature, the more random the completions.
-    top_p (`float`, *optional*, defaults to `1.0`):
-        Float that controls the cumulative probability of the top tokens to consider. Must be in (0, 1]. Set to
-        `1.0` to consider all tokens.
-    top_k (`int` or `None`, *optional*, defaults to `50`):
-        Number of highest probability vocabulary tokens to keep for top-k-filtering. If `None`, top-k-filtering is
-        disabled.
-    min_p (`float` or `None`, *optional*, defaults to `None`):
-        Minimum token probability, which will be scaled by the probability of the most likely token. It must be a
-        value between `0.0` and `1.0`. Typical values are in the `0.01-0.2` range.
-    repetition_penalty (`float`, *optional*, defaults to `1.0`):
-        Float that penalizes new tokens based on whether they appear in the prompt and the generated text so far.
-        Values > `1.0` encourage the model to use new tokens, while values < `1.0` encourage the model to repeat
-        tokens.
-    cache_implementation (`str` or `None`, *optional*, defaults to `None`):
-        Implementation of the cache method for faster generation when use_vllm is set to False.
+        use_vllm (`bool`, *optional*, defaults to `False`):
+            Whether to use vLLM for generating completions. If set to `True`, ensure that a GPU is kept unused for
+            training, as vLLM will require one for generation. vLLM must be installed (`pip install vllm`).
+        vllm_device (`str`, *optional*, defaults to `"auto"`):
+            Device where vLLM generation will run, e.g. `"cuda:1"`. If set to `"auto"` (default), the system will
+            automatically select the next available GPU after the last one used for training. This assumes that
+            training has not already occupied all available GPUs. If only one device is available, the device will be
+            shared between both training and vLLM.
+        vllm_gpu_memory_utilization (`float`, *optional*, defaults to `0.9`):
+            Ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache on the
+            device dedicated to generation powered by vLLM. Higher values will increase the KV cache size and thus
+            improve the model's throughput. However, if the value is too high, it may cause out-of-memory (OOM) errors
+            during initialization.
+        vllm_dtype (`str`, *optional*, defaults to `"auto"`):
+            Data type to use for vLLM generation. If set to `"auto"`, the data type will be automatically determined
+            based on the model configuration. Find the supported values in the vLLM documentation.
+        vllm_max_model_len (`int` or `None`, *optional*, defaults to `None`):
+            If set, the `max_model_len` to use for vLLM. This could be useful when running with reduced
+            `vllm_gpu_memory_utilization`, leading to a reduced KV cache size. If not set, vLLM will use the model
+            context size, which might be much larger than the KV cache, leading to inefficiencies.
 
-    > Parameters that control generation acceleration powered by vLLM
+        > Parameters that control the training
 
-    use_vllm (`bool`, *optional*, defaults to `False`):
-        Whether to use vLLM for generating completions. If set to `True`, ensure that a GPU is kept unused for
-        training, as vLLM will require one for generation. vLLM must be installed (`pip install vllm`).
-    vllm_server_host (`str`, *optional*, defaults to `"0.0.0.0"`):
-        Host of the vLLM server to connect to.
-    vllm_server_port (`int`, *optional*, defaults to `8000`):
-        Port of the vLLM server to connect to.
-    vllm_server_timeout (`float`, *optional*, defaults to `120.0`):
-        Total timeout duration in seconds to wait for the vLLM server to be up. If the server is not up after the
-        timeout, a `ConnectionError` is raised.
-    vllm_guided_decoding_regex (`str` or `None`, *optional*, defaults to `None`):
-        Regex for vLLM guided decoding. If `None` (default), guided decoding is disabled.
+        learning_rate (`float`, *optional*, defaults to `1e-6`):
+            Initial learning rate for [`AdamW`] optimizer. The default value replaces that of
+            [`~transformers.TrainingArguments`].
+        beta (`float`, *optional*, defaults to `0.04`):
+            KL coefficient.
+        reward_weights (`list[float]` or `None`, *optional*, defaults to `None`):
+            Weights for each reward function. Must match the number of reward functions. If `None`, all rewards are
+            weighted equally with weight `1.0`.
+        sync_ref_model (`bool`, *optional*, defaults to `False`):
+            Whether to synchronize the reference model with the active model every `ref_model_sync_steps` steps, using
+            the `ref_model_mixup_alpha` parameter. This synchronization originites from the
+            [TR-DPO](https://huggingface.co/papers/2404.09656) paper.
+        ref_model_mixup_alpha (`float`, *optional*, defaults to `0.9`):
+            α parameter from the [TR-DPO](https://huggingface.co/papers/2404.09656) paper, which controls the mix
+            between the current policy and the previous reference policy during updates. The reference policy is
+            updated according to the equation: `π_ref = α * π_θ + (1 - α) * π_ref_prev`. To use this parameter, you
+            must set `sync_ref_model=True`.
+        ref_model_sync_steps (`int`, *optional*, defaults to `64`):
+            τ parameter from the [TR-DPO](https://huggingface.co/papers/2404.09656) paper, which determines how
+            frequently the current policy is synchronized with the reference policy. To use this parameter, you must
+            set `sync_ref_model=True`.
 
-    > Parameters that control the training
+        > Parameters that control the logging
 
-    learning_rate (`float`, *optional*, defaults to `1e-6`):
-        Initial learning rate for [`AdamW`] optimizer. The default value replaces that of
-        [`~transformers.TrainingArguments`].
-    beta (`float`, *optional*, defaults to `0.04`):
-        KL coefficient. If `0.0`, the reference model is not loaded, reducing memory usage and improving training
-        speed, but may be numerically unstable for long training runs.
-    num_iterations (`int`, *optional*, defaults to `1`):
-        Number of iterations per batch (denoted as μ in the algorithm).
-    epsilon (`float`, *optional*, defaults to `0.2`):
-        Epsilon value for clipping.
-    epsilon_high (`float` or `None`, *optional*, defaults to `None`):
-        Upper-bound epsilon value for clipping. If not specified, it defaults to the same value as the lower-bound
-        specified in argument `epsilon`. Paper [DAPO](https://huggingface.co/papers/2503.14476) recommends `0.28`.
-    reward_weights (`list[float]` or `None`, *optional*, defaults to `None`):
-        Weights for each reward function. Must match the number of reward functions. If `None`, all rewards are
-        weighted equally with weight `1.0`.
-    scale_rewards (`bool`, *optional*, defaults to `True`):
-        Whether to scale the rewards by dividing them by their standard deviation. If `True` (default), the rewards
-        are normalized by the standard deviation, ensuring they have unit variance. If `False`, no scaling is
-        applied. The [Dr. GRPO](https://github.com/sail-sg/understand-r1-zero/blob/main/understand-r1-zero.pdf)
-        paper recommends not scaling the rewards, as scaling by the standard deviation introduces a question-level
-        difficulty bias.
-    sync_ref_model (`bool`, *optional*, defaults to `False`):
-        Whether to synchronize the reference model with the active model every `ref_model_sync_steps` steps, using
-        the `ref_model_mixup_alpha` parameter. This synchronization originites from the
-        [TR-DPO](https://huggingface.co/papers/2404.09656) paper.
-    ref_model_mixup_alpha (`float`, *optional*, defaults to `0.6`):
-        α parameter from the [TR-DPO](https://huggingface.co/papers/2404.09656) paper, which controls the mix
-        between the current policy and the previous reference policy during updates. The reference policy is
-        updated according to the equation: `π_ref = α * π_θ + (1 - α) * π_ref_prev`. To use this parameter, you
-        must set `sync_ref_model=True`.
-    ref_model_sync_steps (`int`, *optional*, defaults to `512`):
-        τ parameter from the [TR-DPO](https://huggingface.co/papers/2404.09656) paper, which determines how
-        frequently the current policy is synchronized with the reference policy. To use this parameter, you must
-        set `sync_ref_model=True`.
-
-    > Parameters that control the logging
-
-    log_completions (`bool`, *optional*, defaults to `False`):
-        Whether to log a sample of (prompt, completion) pairs every `logging_steps` steps. If `rich` is
-        installed, it prints the sample. If `wandb` logging is enabled, it logs it to `wandb`.
-
+        log_completions (`bool`, *optional*, defaults to `False`):
+            Whether to log the completions during training.
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -439,7 +471,6 @@ Parameters:
         include_inputs_for_metrics = False,
         eval_do_concat_batches = True,
         fp16_backend = 'auto',
-        evaluation_strategy = None,
         push_to_hub_model_id = None,
         push_to_hub_organization = None,
         push_to_hub_token = None,
@@ -452,8 +483,6 @@ Parameters:
         torch_compile = False,
         torch_compile_backend = None,
         torch_compile_mode = None,
-        dispatch_batches = None,
-        split_batches = None,
         include_tokens_per_second = False,
         include_num_input_tokens_seen = False,
         neftune_noise_alpha = None,
@@ -466,34 +495,20 @@ Parameters:
         model_init_kwargs = None,
         max_prompt_length = 512,
         num_generations = 8,
+        temperature = 0.9,
         max_completion_length = 256,
         ds3_gather_for_generation = True,
-        temperature = 0.9,
-        top_p = 1.0,
-        top_k = 50,
-        min_p = None,
-        repetition_penalty = 1.0,
-        cache_implementation = None,
         use_vllm = False,
-        vllm_server_host = '0.0.0.0',
-        vllm_server_port = 8000,
-        vllm_server_timeout = 120.0,
-        vllm_guided_decoding_regex = None,
-        beta = 0.04,
-        num_iterations = 1,
-        epsilon = 0.2,
-        epsilon_high = None,
-        reward_weights = None,
-        scale_rewards = True,
-        sync_ref_model = False,
-        ref_model_mixup_alpha = 0.6,
-        ref_model_sync_steps = 512,
-        log_completions = False,
-        vllm_device = None,
-        vllm_gpu_memory_utilization = None,
-        vllm_dtype = None,
+        vllm_device = 'auto',
+        vllm_gpu_memory_utilization = 0.9,
+        vllm_dtype = 'auto',
         vllm_max_model_len = None,
-        vllm_enable_prefix_caching = None,
+        beta = 0.04,
+        reward_weights = None,
+        sync_ref_model = False,
+        ref_model_mixup_alpha = 0.9,
+        ref_model_sync_steps = 64,
+        log_completions = False,
         vllm_sampling_params = None,
         unsloth_num_chunks = -1,
         **kwargs,
@@ -615,7 +630,6 @@ Parameters:
             include_inputs_for_metrics = include_inputs_for_metrics,
             eval_do_concat_batches = eval_do_concat_batches,
             fp16_backend = fp16_backend,
-            evaluation_strategy = evaluation_strategy,
             push_to_hub_model_id = push_to_hub_model_id,
             push_to_hub_organization = push_to_hub_organization,
             push_to_hub_token = push_to_hub_token,
@@ -628,8 +642,6 @@ Parameters:
             torch_compile = torch_compile,
             torch_compile_backend = torch_compile_backend,
             torch_compile_mode = torch_compile_mode,
-            dispatch_batches = dispatch_batches,
-            split_batches = split_batches,
             include_tokens_per_second = include_tokens_per_second,
             include_num_input_tokens_seen = include_num_input_tokens_seen,
             neftune_noise_alpha = neftune_noise_alpha,
@@ -642,129 +654,26 @@ Parameters:
             model_init_kwargs = model_init_kwargs,
             max_prompt_length = max_prompt_length,
             num_generations = num_generations,
+            temperature = temperature,
             max_completion_length = max_completion_length,
             ds3_gather_for_generation = ds3_gather_for_generation,
-            temperature = temperature,
-            top_p = top_p,
-            top_k = top_k,
-            min_p = min_p,
-            repetition_penalty = repetition_penalty,
-            cache_implementation = cache_implementation,
             use_vllm = use_vllm,
-            vllm_server_host = vllm_server_host,
-            vllm_server_port = vllm_server_port,
-            vllm_server_timeout = vllm_server_timeout,
-            vllm_guided_decoding_regex = vllm_guided_decoding_regex,
-            beta = beta,
-            num_iterations = num_iterations,
-            epsilon = epsilon,
-            epsilon_high = epsilon_high,
-            reward_weights = reward_weights,
-            scale_rewards = scale_rewards,
-            sync_ref_model = sync_ref_model,
-            ref_model_mixup_alpha = ref_model_mixup_alpha,
-            ref_model_sync_steps = ref_model_sync_steps,
-            log_completions = log_completions,
             vllm_device = vllm_device,
             vllm_gpu_memory_utilization = vllm_gpu_memory_utilization,
             vllm_dtype = vllm_dtype,
             vllm_max_model_len = vllm_max_model_len,
-            vllm_enable_prefix_caching = vllm_enable_prefix_caching,**kwargs)
+            beta = beta,
+            reward_weights = reward_weights,
+            sync_ref_model = sync_ref_model,
+            ref_model_mixup_alpha = ref_model_mixup_alpha,
+            ref_model_sync_steps = ref_model_sync_steps,
+            log_completions = log_completions,**kwargs)
         self.vllm_sampling_params = vllm_sampling_params
         self.unsloth_num_chunks = unsloth_num_chunks
 pass
 
 class _UnslothGRPOTrainer(Trainer):
-    """
-    Trainer for the Group Relative Policy Optimization (GRPO) method. This algorithm was initially proposed in the
-    paper [DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models](https://huggingface.co/papers/2402.03300).
-
-    Example:
-
-    ```python
-    from datasets import load_dataset
-    from trl import GRPOTrainer
-
-    dataset = load_dataset("trl-lib/tldr", split="train")
-
-    def reward_func(completions, **kwargs):
-        # Dummy reward function that rewards completions with more unique letters.
-        return [float(len(set(completion))) for completion in completions]
-
-    trainer = GRPOTrainer(
-        model="Qwen/Qwen2-0.5B-Instruct",
-        reward_funcs=reward_func,
-        train_dataset=dataset,
-    )
-
-    trainer.train()
-    ```
-
-    Args:
-        model (`Union[str, PreTrainedModel]`):
-            Model to be trained. Can be either:
-
-            - A string, being the *model id* of a pretrained model hosted inside a model repo on huggingface.co, or
-              a path to a *directory* containing model weights saved using
-              [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is
-              loaded using [`~transformers.AutoModelForCausalLM.from_pretrained`] with the keywork arguments
-              in `args.model_init_kwargs`.
-            - A [`~transformers.PreTrainedModel`] object. Only causal language models are supported.
-        reward_funcs (`Union[RewardFunc, list[RewardFunc]]`):
-            Reward functions to be used for computing the rewards. To compute the rewards, we call all the reward
-            functions with the prompts and completions and sum the rewards. Can be either:
-
-            - A single reward function, such as:
-                - A string: The *model ID* of a pretrained model hosted inside a model repo on huggingface.co, or a
-                path to a *directory* containing model weights saved using
-                [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is loaded
-                using [`~transformers.AutoModelForSequenceClassification.from_pretrained`] with `num_labels=1` and the
-                keyword arguments in `args.model_init_kwargs`.
-                - A [`~transformers.PreTrainedModel`] object: Only sequence classification models are supported.
-                - A custom reward function: The function is provided with the prompts and the generated completions,
-                  plus any additional columns in the dataset. It should return a list of rewards. Custom reward
-                  functions can also return None when the reward is not applicable to those samples. This is useful for
-                  multi-task training where different reward functions apply to different types of samples. When a
-                  reward function returns None for a sample, that reward function is excluded from the reward
-                  calculation for that sample. For more details, see
-                  [Using a custom reward function](#using-a-custom-reward-function).
-            - A list of reward functions, where each item can independently be any of the above types. Mixing different
-            types within the list (e.g., a string model ID and a custom reward function) is allowed.
-        args ([`GRPOConfig`], *optional*, defaults to `None`):
-            Configuration for this trainer. If `None`, a default configuration is used.
-        train_dataset ([`~datasets.Dataset`] or [`~datasets.IterableDataset`]):
-            Dataset to use for training. It must include a column `"prompt"`. Any additional columns in the dataset is
-            ignored. The format of the samples can be either:
-
-            - [Standard](dataset_formats#standard): Each sample contains plain text.
-            - [Conversational](dataset_formats#conversational): Each sample contains structured messages (e.g., role
-              and content).
-        eval_dataset ([`~datasets.Dataset`], [`~datasets.IterableDataset`] or `dict[str, Union[Dataset, IterableDataset]]`):
-            Dataset to use for evaluation. It must meet the same requirements as `train_dataset`.
-        processing_class ([`~transformers.PreTrainedTokenizerBase`], *optional*, defaults to `None`):
-            Processing class used to process the data. The padding side must be set to "left". If `None`, the
-            processing class is loaded from the model's name with [`~transformers.AutoTokenizer.from_pretrained`].
-        reward_processing_classes (`Union[PreTrainedTokenizerBase, list[PreTrainedTokenizerBase]]`, *optional*, defaults to `None`):
-            Processing classes corresponding to the reward functions specified in `reward_funcs`. Can be either:
-
-            - A single processing class: Used when `reward_funcs` contains only one reward function.
-            - A list of processing classes: Must match the order and length of the reward functions in `reward_funcs`.
-            If set to `None`, or if an element of the list corresponding to a [`~transformers.PreTrainedModel`] is
-            `None`, the tokenizer for the model is automatically loaded using [`~transformers.AutoTokenizer.from_pretrained`].
-            For elements in `reward_funcs` that are custom reward functions (not [`~transformers.PreTrainedModel`]),
-            the corresponding entries in `reward_processing_classes` are ignored.
-        callbacks (list of [`~transformers.TrainerCallback`], *optional*, defaults to `None`):
-            List of callbacks to customize the training loop. Will add those to the list of default callbacks
-            detailed in [here](https://huggingface.co/docs/transformers/main_classes/callback).
-
-            If you want to remove one of the default callbacks used, use the [`~transformers.Trainer.remove_callback`]
-            method.
-        optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`, *optional*, defaults to `(None, None)`):
-            A tuple containing the optimizer and the scheduler to use. Will default to an instance of [`AdamW`] on your
-            model and a scheduler given by [`get_linear_schedule_with_warmup`] controlled by `args`.
-        peft_config ([`~peft.PeftConfig`], *optional*, defaults to `None`):
-            PEFT configuration used to wrap the model. If `None`, the model is not wrapped.
-    """
+    """"""
 
     _tag_names = ["trl", "grpo"]
 
@@ -772,7 +681,7 @@ class _UnslothGRPOTrainer(Trainer):
         self,
         model: Union[str, PreTrainedModel],
         reward_funcs: Union[RewardFunc, list[RewardFunc]],
-        args: Optional[GRPOConfig] = None,
+        args: GRPOConfig = None,
         train_dataset: Optional[Union[Dataset, IterableDataset]] = None,
         eval_dataset: Optional[Union[Dataset, IterableDataset, dict[str, Union[Dataset, IterableDataset]]]] = None,
         processing_class: Optional[PreTrainedTokenizerBase] = None,
@@ -819,28 +728,18 @@ class _UnslothGRPOTrainer(Trainer):
                 )
 
         if False:
-            if not is_peft_available():
-                raise ImportError("PEFT is required to use `peft_config`. Run `pip install peft`.")
             model = model
 
-        # Enable gradient checkpointing if requested
-        if args.gradient_checkpointing:
-            model = self._enable_gradient_checkpointing(model, args)
-
         # Reference model
-        self.beta = args.beta
-        if self.beta == 0.0:
-            # If beta is 0.0, the reference model is not needed
-            self.ref_model = None
-        elif is_deepspeed_zero3_enabled():
+        if is_deepspeed_zero3_enabled():
             self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
-        elif is_peft_model(model):
+        elif not is_peft_model(model):
+            # If PEFT configuration is not provided, create a reference model based on the initial model.
+            self.ref_model = create_reference_model(model)
+        else:
             # If PEFT is used, the reference model is not needed since the adapter can be disabled
             # to revert to the initial model.
             self.ref_model = None
-        else:
-            # If PEFT configuration is not provided, create a reference model based on the initial model.
-            self.ref_model = create_reference_model(model)
 
         # Processing class
         if processing_class is None:
@@ -896,22 +795,9 @@ class _UnslothGRPOTrainer(Trainer):
         self.max_prompt_length = args.max_prompt_length
         self.max_completion_length = args.max_completion_length  # = |o_i| in the GRPO paper
         self.num_generations = args.num_generations  # = G in the GRPO paper
-        self.temperature = args.temperature
-        self.top_p = args.top_p
-        self.top_k = args.top_k
-        self.min_p = args.min_p
-        self.repetition_penalty = args.repetition_penalty
         self.use_vllm = args.use_vllm
 
-        # Multi-step
-        self.num_iterations = args.num_iterations  # = 𝜇 in the GRPO paper
-        self.epsilon_low = args.epsilon
-        self.epsilon_high = args.epsilon_high if args.epsilon_high is not None else args.epsilon
-        # Tracks the number of iterations (forward + backward passes), including those within a grad accum cycle
-        self._step = 0
-        # Buffer the batch to reuse generated outputs across multiple updates. For more details, see
-        # `_get_train_sampler` and `_prepare_inputs`.
-        self._buffered_inputs = [None] * args.gradient_accumulation_steps
+        self.beta = args.beta
 
         # The trainer estimates the number of FLOPs (floating-point operations) using the number of elements in the
         # input tensor associated with the key "input_ids". However, in GRPO, the sampled data does not include the
@@ -922,8 +808,7 @@ class _UnslothGRPOTrainer(Trainer):
         model.warnings_issued["estimate_tokens"] = True
 
         # Initialize the metrics
-        self._metrics = {"train": defaultdict(list), "eval": defaultdict(list)}
-        self._total_train_tokens = 0
+        self._metrics = defaultdict(list)
         self.log_completions = args.log_completions
 
         super().__init__(
@@ -963,39 +848,15 @@ class _UnslothGRPOTrainer(Trainer):
         set_seed(args.seed, device_specific=True)
 
         if self.use_vllm:
-            if not is_vllm_available():
-                raise ImportError(
-                    "vLLM is not available and `use_vllm` is set to True. Please install vLLM with "
-                    "`pip install vllm` to use it."
-                )
-
-            if self.accelerator.is_main_process:
-                self.vllm_client = VLLMClient(
-                    args.vllm_server_host, args.vllm_server_port, connection_timeout=args.vllm_server_timeout
-                )
-
-            # vLLM specific sampling arguments
-            self.guided_decoding_regex = args.vllm_guided_decoding_regex
-
-            self._last_loaded_step = 0  # tag to avoid useless loading during grad accumulation
-
-            # When using vLLM, the main process is responsible for loading the model weights. This can cause process
-            # desynchronization and seems to lead to DeepSpeed hanging during initialization. To prevent this, we
-            # synchronize all processes after vLLM has been fully initialized.
-            self.accelerator.wait_for_everyone()
+            self.llm = model.vllm_engine; self._last_loaded_step = 0; self.sampling_params = SamplingParams(
+                    temperature=args.temperature,
+                    max_tokens=self.max_completion_length,**getattr(getattr(args, 'vllm_sampling_params', vLLMSamplingParams()), '_set_kwargs', {}),)
         else:
             self.generation_config = GenerationConfig(
                 max_new_tokens=self.max_completion_length,
                 do_sample=True,
+                temperature=args.temperature,
                 pad_token_id=processing_class.pad_token_id,
-                bos_token_id=processing_class.bos_token_id,
-                eos_token_id=processing_class.eos_token_id,
-                temperature=self.temperature,
-                top_p=self.top_p,
-                top_k=self.top_k,
-                min_p=self.min_p,
-                repetition_penalty=self.repetition_penalty,
-                cache_implementation=args.cache_implementation,
             )
 
         # Gradient accumulation requires scaled loss. Normally, loss scaling in the parent class depends on whether the
@@ -1028,81 +889,27 @@ class _UnslothGRPOTrainer(Trainer):
             self._signature_columns = ["prompt"]
 
     def _get_train_sampler(self) -> Sampler:
-        # Returns a sampler that
-        # 1. ensures each prompt is repeated across multiple processes. This guarantees that identical prompts are
-        #    distributed to different GPUs, allowing rewards to be computed and normalized correctly within each prompt
-        #    group. Using the same seed across processes ensures consistent prompt assignment, preventing discrepancies
-        #    in group formation.
-        # 2. repeats the batch multiple times to allow reusing generations across multiple updates. Refer to
-        #    _prepare_inputs to see how the generations are stored and reused.
-
-        # In the following figure, the values are the prompt indices. The first row shows the first sampled batch, the
-        # second row shows the second sampled batch, and so on.
-        #
-        #                                     |     GPU 0     |     GPU 1     |     GPU 2    |
-        #
-        #               global_step   step     <───────>  num_generations=3
-        #                                      <───────────> per_device_train_batch_size=4
-        #                ▲   0          0      0   0   0   1   1   1   2   2   2   3   3   3  │
-        #  grad_accum=3  │   0          1      4   4   4   5   5   5   6   6   6   7   7   7  │ Generate completions for each prompt
-        #                ▼   0          2      8   8   8   9   9   9  10  10  10  11  11  11  │
-        #
-        #                    1          3      0   0   0   1   1   1   2   2   2   3   3   3  │ The sampled prompts are the same as in the first iteration
-        #                    1          4      4   4   4   5   5   5   6   6   6   7   7   7  │ Reuse the completions (here, once, because num_iterations=2)
-        #                    1          5      8   8   8   9   9   9  10  10  10  11  11  11  │
-        #
-        #                    2          6     12  12  12  13  13  13  14  14  14  15  15  15
-        #                    2          7     16  16  16  17  17  17  18  18  18  19  19  19
-        #                    2          8     20  20  20  21  21  21  22  22  22  23  23  23
-        #                                          ...
-        effective_batch_size = (
-            self.args.per_device_train_batch_size
-            * self.accelerator.num_processes
-            * self.args.gradient_accumulation_steps
-        )
-        return RepeatRandomSampler(
-            data_source=self.train_dataset,
-            mini_repeat_count=self.num_generations,
-            batch_size=effective_batch_size // self.num_generations,
-            repeat_count=self.num_iterations,
-            seed=self.args.seed,
-        )
+        # Returns a sampler that ensures each prompt is repeated across multiple processes. This guarantees that
+        # identical prompts are distributed to different GPUs, allowing rewards to be computed and normalized correctly
+        # within each prompt group. Using the same seed across processes ensures consistent prompt assignment,
+        # preventing discrepancies in group formation.
+        return RepeatRandomSampler(self.train_dataset, self.num_generations, seed=self.args.seed)
 
     def _get_eval_sampler(self, eval_dataset) -> Sampler:
-        # See _get_train_sampler for an explanation of the sampler.
-        return RepeatRandomSampler(
-            data_source=eval_dataset,
-            mini_repeat_count=self.num_generations,
-            seed=self.args.seed,
-        )
-
-    def _enable_gradient_checkpointing(self, model: PreTrainedModel, args: GRPOConfig) -> PreTrainedModel:
-        """Enables gradient checkpointing for the model."""
-        # Ensure use_cache is disabled
-        model.config.use_cache = False
-
-        # Enable gradient checkpointing on the base model for PEFT
-        if is_peft_model(model):
-            model.base_model.gradient_checkpointing_enable()
-        # Enable gradient checkpointing for non-PEFT models
-        else:
-            model.gradient_checkpointing_enable()
-
-        gradient_checkpointing_kwargs = args.gradient_checkpointing_kwargs or {}
-        use_reentrant = (
-            "use_reentrant" not in gradient_checkpointing_kwargs or gradient_checkpointing_kwargs["use_reentrant"]
-        )
-
-        if use_reentrant:
-            model.enable_input_require_grads()
-
-        return model
+        # Returns a sampler that ensures each prompt is repeated across multiple processes. This guarantees that
+        # identical prompts are distributed to different GPUs, allowing rewards to be computed and normalized correctly
+        # within each prompt group. Using the same seed across processes ensures consistent prompt assignment,
+        # preventing discrepancies in group formation.
+        return RepeatRandomSampler(eval_dataset, self.num_generations, seed=self.args.seed)
 
     # Get the per-token log probabilities for the completions for the model and the reference model
     def _get_per_token_logps(self, model, input_ids, attention_mask, logits_to_keep):
-        return None # Unsloth efficient GRPO
+        if os.environ.get('UNSLOTH_USE_NEW_MODEL', '0') == '0':
+            return None # Unsloth efficient GRPO
+        # Otherwise, calculate normally:
         if not hasattr(self, '_autocast_dtype'):
             self._autocast_dtype = torch.float16 if os.environ.get('ACCELERATE_MIXED_PRECISION', 'fp16') == 'fp16' else torch.bfloat16
+            if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '1': self._autocast_dtype = torch.float16
         with torch.amp.autocast(device_type = 'cuda', dtype = self._autocast_dtype):
             # We add 1 to `logits_to_keep` because the last logits of the sequence is later excluded
             logits = model(input_ids=input_ids, attention_mask=attention_mask, logits_to_keep=logits_to_keep + 1).logits
@@ -1118,29 +925,12 @@ class _UnslothGRPOTrainer(Trainer):
 
     def _move_model_to_vllm(self, *args, **kwargs): return None
 
-    @profiling_decorator
     def _prepare_inputs(self, inputs: dict[str, Union[torch.Tensor, Any]]) -> dict[str, Union[torch.Tensor, Any]]:
-        mode = "eval" if self.control.should_evaluate else "train"
-        if mode == "train":
-            if self.state.global_step % self.num_iterations == 0:
-                inputs = self._generate_and_score_completions(inputs)
-                self._buffered_inputs[self._step % self.args.gradient_accumulation_steps] = inputs
-            else:
-                inputs = self._buffered_inputs[self._step % self.args.gradient_accumulation_steps]
-            self._step += 1
-        else:
-            # In evaluation, we don't reuse completions across multiple updates, so we don't need to buffer inputs.
-            inputs = self._generate_and_score_completions(inputs)
-        return inputs
-
-    def _generate_and_score_completions(
-        self, inputs: dict[str, Union[torch.Tensor, Any]]
-    ) -> dict[str, Union[torch.Tensor, Any]]:
         device = self.accelerator.device
         prompts = [x["prompt"] for x in inputs]
         prompts_text = [maybe_apply_chat_template(example, self.processing_class)["prompt"] for example in inputs]
         prompt_inputs = self.processing_class(
-            text=prompts_text, return_tensors="pt", padding=True, padding_side="left", add_special_tokens=False
+            prompts_text, return_tensors="pt", padding=True, padding_side="left", add_special_tokens=False
         )
         prompt_inputs = super()._prepare_inputs(prompt_inputs)
         prompt_ids, prompt_mask = prompt_inputs["input_ids"], prompt_inputs["attention_mask"]
@@ -1159,22 +949,8 @@ class _UnslothGRPOTrainer(Trainer):
             # Generate completions using vLLM: gather all prompts and use them in a single call in the main process
             all_prompts_text = gather_object(prompts_text)
             if self.accelerator.is_main_process:
-                # Since 'prompts' contains 'num_generations' duplicates, we first take unique prompts, and generate
-                # num_generations outputs for each one. This is faster than generating outputs for each duplicate
-                # prompt individually.
-                ordered_set_of_prompts = all_prompts_text[:: self.num_generations]
-                with profiling_context(self, "vLLM.generate"):
-                    completion_ids = self.vllm_client.generate(
-                        prompts=ordered_set_of_prompts,
-                        n=self.num_generations,
-                        repetition_penalty=self.repetition_penalty,
-                        temperature=self.temperature,
-                        top_p=self.top_p,
-                        top_k=-1 if self.top_k is None else self.top_k,
-                        min_p=0.0 if self.min_p is None else self.min_p,
-                        max_tokens=self.max_completion_length,
-                        guided_decoding_regex=self.guided_decoding_regex,
-                    )
+                outputs = self.llm.generate(all_prompts_text, sampling_params=self.sampling_params, use_tqdm=False, lora_request = self.model.load_lora('grpo_trainer_lora_model', load_tensors = True))
+                completion_ids = [out.token_ids for completions in outputs for out in completions.outputs]
             else:
                 completion_ids = [None] * len(all_prompts_text)
             # Broadcast the completions from the main process to all processes, ensuring each process receives its
@@ -1192,9 +968,7 @@ class _UnslothGRPOTrainer(Trainer):
             prompt_completion_ids = torch.cat([prompt_ids, completion_ids], dim=1)
         else:
             # Regular generation path
-            with unwrap_model_for_generation(
-                self.model_wrapped, self.accelerator, gather_deepspeed3_params=self.args.ds3_gather_for_generation
-            ) as unwrapped_model:
+            with unwrap_model_for_generation(self.model, self.accelerator) as unwrapped_model:
                 prompt_completion_ids = unwrapped_model.generate(
                     prompt_ids, attention_mask=prompt_mask, generation_config=self.generation_config
                 )
@@ -1212,28 +986,17 @@ class _UnslothGRPOTrainer(Trainer):
         completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
 
         # Concatenate prompt_mask with completion_mask for logit computation
-        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)  # (B, P+C)
+        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)  # (B*G, P+C)
 
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
 
-        with torch.no_grad():
-            # When using num_iterations == 1, old_per_token_logps == per_token_logps, so we can skip it's
-            # computation here, and use per_token_logps.detach() instead.
-            if self.num_iterations > 1:
-                old_per_token_logps = self._get_per_token_logps(
-                    self.model, prompt_completion_ids, attention_mask, logits_to_keep
-                )
-            else:
-                old_per_token_logps = None
-
-            if self.beta == 0.0:
-                ref_per_token_logps = None
-            elif self.ref_model is not None:
+        with torch.inference_mode(), torch.amp.autocast(device_type = 'cuda', dtype = ((torch.float16 if os.environ.get('ACCELERATE_MIXED_PRECISION', 'fp16') == 'fp16' else torch.bfloat16) if not torch.is_autocast_enabled('cuda') else nullcontext())if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '0' else torch.float16):
+            if self.ref_model is not None:
                 ref_per_token_logps = self._get_per_token_logps(
                     self.ref_model, prompt_completion_ids, attention_mask, logits_to_keep
                 )
             else:
-                with self.accelerator.unwrap_model(self.model).disable_adapter():
+                with self.accelerator.unwrap_model(self.model, keep_fp32_wrapper = False).disable_adapter():
                     ref_per_token_logps = self._get_per_token_logps(
                         self.model, prompt_completion_ids, attention_mask, logits_to_keep
                     )
@@ -1253,51 +1016,30 @@ class _UnslothGRPOTrainer(Trainer):
             zip(self.reward_funcs, self.reward_processing_classes)
         ):
             if isinstance(reward_func, nn.Module):  # Module instead of PretrainedModel for compat with compiled models
-                reward_func_name = f"reward {reward_func.config._name_or_path.split('/')[-1]}"
-            else:
-                reward_func_name = reward_func.__name__
-            with profiling_context(self, reward_func_name):
-                if isinstance(
-                    reward_func, nn.Module
-                ):  # Module instead of PretrainedModel for compat with compiled models
-                    if is_conversational(inputs[0]):
-                        messages = [{"messages": p + c} for p, c in zip(prompts, completions)]
-                        texts = [apply_chat_template(x, reward_processing_class)["text"] for x in messages]
-                    else:
-                        texts = [p + c for p, c in zip(prompts, completions)]
-                    reward_inputs = reward_processing_class(
-                        text=texts, return_tensors="pt", padding=True, padding_side="right", add_special_tokens=False
-                    )
-                    reward_inputs = super()._prepare_inputs(reward_inputs)
-                    with torch.inference_mode():
-                        rewards_per_func[:, i] = reward_func(**reward_inputs).logits[:, 0]  # Shape (B*G,)
+                if is_conversational(inputs[0]):
+                    messages = [{"messages": p + c} for p, c in zip(prompts, completions)]
+                    texts = [apply_chat_template(x, reward_processing_class)["text"] for x in messages]
                 else:
-                    # Repeat all input columns (but "prompt" and "completion") to match the number of generations
-                    keys = [key for key in inputs[0] if key not in ["prompt", "completion"]]
-                    reward_kwargs = {key: [example[key] for example in inputs] for key in keys}
-                    output_reward_func = reward_func(prompts=prompts, completions=completions, **reward_kwargs)
-                    # Convert None values to NaN
-                    output_reward_func = [reward if reward is not None else torch.nan for reward in output_reward_func]
-
-                    rewards_per_func[:, i] = torch.tensor(output_reward_func, dtype=torch.float32, device=device)
-
-        # If all reward functions return None for a given row, issue a detailed warning
-        if torch.isnan(rewards_per_func).all(dim=1).any():
-            nan_row_idx = torch.isnan(rewards_per_func).all(dim=1).nonzero(as_tuple=True)[0][0]
-            row_reward_kwargs = {key: value[nan_row_idx] for key, value in reward_kwargs.items()}
-            row_reward_kwargs["prompt"] = prompts[nan_row_idx]
-            row_reward_kwargs["completion"] = completions[nan_row_idx]
-            warnings.warn(
-                f"All reward functions returned None for the following kwargs: {row_reward_kwargs}. "
-                "Please ensure that at least one reward function returns a valid reward."
-            )
+                    texts = [p + c for p, c in zip(prompts, completions)]
+                reward_inputs = reward_processing_class(
+                    texts, return_tensors="pt", padding=True, padding_side="right", add_special_tokens=False
+                )
+                reward_inputs = super()._prepare_inputs(reward_inputs)
+                with torch.inference_mode(), torch.amp.autocast(device_type = 'cuda', dtype = ((torch.float16 if os.environ.get('ACCELERATE_MIXED_PRECISION', 'fp16') == 'fp16' else torch.bfloat16) if not torch.is_autocast_enabled('cuda') else nullcontext())if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '0' else torch.float16):
+                    rewards_per_func[:, i] = reward_func(**reward_inputs).logits[:, 0]  # Shape (B*G,)
+            else:
+                # Repeat all input columns (but "prompt" and "completion") to match the number of generations
+                keys = [key for key in inputs[0] if key not in ["prompt", "completion"]]
+                reward_kwargs = {key: [example[key] for example in inputs] for key in keys}
+                output_reward_func = reward_func(prompts=prompts, completions=completions, **reward_kwargs)
+                rewards_per_func[:, i] = torch.tensor(output_reward_func, dtype=torch.float32, device=device)
 
         # Gather the reward per function: this part is crucial, because the rewards are normalized per group and the
         # completions may be distributed across processes
         rewards_per_func = gather(rewards_per_func)
 
         # Apply weights to each reward function's output and sum
-        rewards = (rewards_per_func * self.reward_weights.to(device).unsqueeze(0)).nansum(dim=1)
+        rewards = (rewards_per_func * self.reward_weights.to(device).unsqueeze(0)).sum(dim=1)
 
         # Compute grouped-wise rewards
         mean_grouped_rewards = rewards.view(-1, self.num_generations).mean(dim=1)
@@ -1306,9 +1048,7 @@ class _UnslothGRPOTrainer(Trainer):
         # Normalize the rewards to compute the advantages
         mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
         std_grouped_rewards = std_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
-        advantages = rewards - mean_grouped_rewards
-        if self.args.scale_rewards:
-            advantages = advantages / (std_grouped_rewards + 1e-4)
+        advantages = (rewards - mean_grouped_rewards) / (std_grouped_rewards + 1e-4)
 
         # Slice to keep only the local part of the data
         process_slice = slice(
@@ -1318,59 +1058,41 @@ class _UnslothGRPOTrainer(Trainer):
         advantages = advantages[process_slice]
 
         # Log the metrics
-        mode = "eval" if self.control.should_evaluate else "train"
-
-        if mode == "train":
-            self._total_train_tokens += self.accelerator.gather_for_metrics(attention_mask.sum()).sum().item()
-        self._metrics[mode]["num_tokens"] = [self._total_train_tokens]
-
-        completion_length = self.accelerator.gather_for_metrics(completion_mask.sum(1)).float().mean().item()
-        self._metrics[mode]["completion_length"].append(completion_length)
-
-        # Calculate mean reward per function, but only for samples where the function was applied
+        reward_per_func = rewards_per_func.mean(0)
         for i, reward_func in enumerate(self.reward_funcs):
             if isinstance(reward_func, nn.Module):  # Module instead of PretrainedModel for compat with compiled models
                 reward_func_name = reward_func.config._name_or_path.split("/")[-1]
             else:
                 reward_func_name = reward_func.__name__
-            # Only calculate mean for samples where this reward function was applied (non-NaN values)
-            mean_rewards = torch.nanmean(rewards_per_func[:, i]).item()
-            self._metrics[mode][f"rewards/{reward_func_name}"].append(mean_rewards)
-        self._metrics[mode]["reward"].append(rewards.mean().item())
-        self._metrics[mode]["reward_std"].append(std_grouped_rewards.mean().item())
+            self._metrics[f"rewards/{reward_func_name}"].append(reward_per_func[i].item())
 
-        if self.log_completions and self.state.global_step % self.args.logging_steps == 0:
-            prompts_to_log = gather_object(prompts_text)
-            completions_to_log = gather_object(completions_text)
-            rewards_to_log = rewards.tolist()
+        self._metrics["reward"].append(rewards.mean().item())
+        self._metrics["reward_std"].append(std_grouped_rewards.mean().item())
 
-            if self.accelerator.is_main_process:
-                if is_rich_available():
-                    print_prompt_completions_sample(
-                        prompts_to_log,
-                        completions_to_log,
-                        rewards_to_log,
-                        self.state.global_step,
-                    )
-                if self.args.report_to and "wandb" in self.args.report_to and wandb.run is not None:
-                    import pandas as pd
+        if (
+            self.log_completions
+            and self.state.global_step % self.args.logging_steps == 0
+            and "wandb" in self.args.report_to
+        ):
+            import pandas as pd
 
-                    # For logging
-                    table = {
-                        "step": [str(self.state.global_step)] * len(rewards),
-                        "prompt": prompts_to_log,
-                        "completion": completions_to_log,
-                        "reward": rewards.tolist(),
-                    }
-                    df = pd.DataFrame(table)
-                    wandb.log({"completions": wandb.Table(dataframe=df)})
+            # For logging
+            table = {
+                "step": [str(self.state.global_step)] * len(rewards),
+                "prompt": gather_object(prompts_text),
+                "completion": gather_object(completions_text),
+                "reward": rewards.tolist(),
+            }
+            df = pd.DataFrame(table)
+
+            if wandb.run is not None and self.accelerator.is_main_process:
+                wandb.log({"completions": wandb.Table(dataframe=df)})
 
         return {
             "prompt_ids": prompt_ids,
             "prompt_mask": prompt_mask,
             "completion_ids": completion_ids,
             "completion_mask": completion_mask,
-            "old_per_token_logps": old_per_token_logps,
             "ref_per_token_logps": ref_per_token_logps,
             "advantages": advantages,
         }
@@ -1384,11 +1106,12 @@ class _UnslothGRPOTrainer(Trainer):
         completion_ids, completion_mask = inputs["completion_ids"], inputs["completion_mask"]
         input_ids = torch.cat([prompt_ids, completion_ids], dim=1)
         bsz, qlen = input_ids.shape
-        # attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
-        attention_mask = None
+        attention_mask = torch.cat([prompt_mask, completion_mask], dim=1)
+        # attention_mask = None
         logits_to_keep = completion_ids.size(1)  # we only need to compute the logits for the completion tokens
         _input_ids = input_ids
         _logits_to_keep = logits_to_keep
+        
         per_token_logps = self._get_per_token_logps(model, input_ids, attention_mask, logits_to_keep)
 
         # Compute the KL divergence between the model and the reference model
@@ -1401,8 +1124,8 @@ class _UnslothGRPOTrainer(Trainer):
         # per_token_loss = -(per_token_loss - self.beta * per_token_kl)
         # loss = ((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
         input_ids = input_ids[:, -logits_to_keep:]
-        if False:#per_token_logps is not None:
-            loss, completion_length, mean_kl = grpo_compute_loss(
+        if per_token_logps is not None:
+            loss, completion_length, mean_kl = grpo_compute_loss_slow(
                 ref_per_token_logps, per_token_logps, input_ids, completion_mask, self.beta, advantages,
             )
         else:
@@ -1435,12 +1158,11 @@ class _UnslothGRPOTrainer(Trainer):
         return loss, None, None
 
     def log(self, logs: dict[str, float], start_time: Optional[float] = None) -> None:
-        mode = "eval" if self.control.should_evaluate else "train"
-        metrics = {key: sum(val) / len(val) for key, val in self._metrics[mode].items()}  # average the metrics
+        metrics = {key: sum(val) / len(val) for key, val in self._metrics.items()}  # average the metrics
 
         # This method can be called both in training and evaluation. When called in evaluation, the keys in `logs`
         # start with "eval_". We need to add the prefix "eval_" to the keys in `metrics` to match the format.
-        if mode == "eval":
+        if next(iter(logs.keys())).startswith("eval_"):
             metrics = {f"eval_{key}": val for key, val in metrics.items()}
 
         logs = {**logs, **metrics}
@@ -1448,7 +1170,7 @@ class _UnslothGRPOTrainer(Trainer):
             super().log(logs, start_time)
         else:  # transformers<=4.46
             super().log(logs)
-        self._metrics[mode].clear()
+        self._metrics.clear()
 
     def create_model_card(
         self,
@@ -1511,95 +1233,91 @@ class _UnslothGRPOTrainer(Trainer):
 class UnslothGRPOTrainer(_UnslothGRPOTrainer):
     """
     
-Trainer for the Group Relative Policy Optimization (GRPO) method. This algorithm was initially proposed in the
-paper [DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models](https://huggingface.co/papers/2402.03300).
+    Trainer for the Group Relative Policy Optimization (GRPO) method. This algorithm was initially proposed in the
+    paper [DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models](https://huggingface.co/papers/2402.03300).
 
-Example:
+    Example:
 
-```python
-from datasets import load_dataset
-from trl import GRPOTrainer
+    ```python
+    from datasets import load_dataset
+    from trl import GRPOTrainer
 
-dataset = load_dataset("trl-lib/tldr", split="train")
+    dataset = load_dataset("trl-lib/tldr", split="train")
 
-def reward_func(completions, **kwargs):
-    # Dummy reward function that rewards completions with more unique letters.
-    return [float(len(set(completion))) for completion in completions]
+    def reward_func(completions, **kwargs):
+        # Dummy reward function that rewards completions with more unique letters.
+        return [float(len(set(completion))) for completion in completions]
 
-trainer = GRPOTrainer(
-    model="Qwen/Qwen2-0.5B-Instruct",
-    reward_funcs=reward_func,
-    train_dataset=dataset,
-)
+    trainer = GRPOTrainer(
+        model="Qwen/Qwen2-0.5B-Instruct",
+        reward_funcs=reward_func,
+        train_dataset=dataset,
+    )
 
-trainer.train()
-```
+    trainer.train()
+    ```
 
-Args:
-    model (`Union[str, PreTrainedModel]`):
-        Model to be trained. Can be either:
+    Args:
+        model (`Union[str, PreTrainedModel]`):
+            Model to be trained. Can be either:
 
-        - A string, being the *model id* of a pretrained model hosted inside a model repo on huggingface.co, or
-          a path to a *directory* containing model weights saved using
-          [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is
-          loaded using [`~transformers.AutoModelForCausalLM.from_pretrained`] with the keywork arguments
-          in `args.model_init_kwargs`.
-        - A [`~transformers.PreTrainedModel`] object. Only causal language models are supported.
-    reward_funcs (`Union[RewardFunc, list[RewardFunc]]`):
-        Reward functions to be used for computing the rewards. To compute the rewards, we call all the reward
-        functions with the prompts and completions and sum the rewards. Can be either:
+            - A string, being the *model id* of a pretrained model hosted inside a model repo on huggingface.co, or
+              a path to a *directory* containing model weights saved using
+              [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is
+              loaded using [`~transformers.AutoModelForCausalLM.from_pretrained`] with the keywork arguments
+              in `args.model_init_kwargs`.
+            - A [`~transformers.PreTrainedModel`] object. Only causal language models are supported.
+        reward_funcs (`Union[RewardFunc, list[RewardFunc]]`):
+            Reward functions to be used for computing the rewards. To compute the rewards, we call all the reward
+            functions with the prompts and completions and sum the rewards. Can be either:
 
-        - A single reward function, such as:
-            - A string: The *model ID* of a pretrained model hosted inside a model repo on huggingface.co, or a
-            path to a *directory* containing model weights saved using
-            [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is loaded
-            using [`~transformers.AutoModelForSequenceClassification.from_pretrained`] with `num_labels=1` and the
-            keyword arguments in `args.model_init_kwargs`.
-            - A [`~transformers.PreTrainedModel`] object: Only sequence classification models are supported.
-            - A custom reward function: The function is provided with the prompts and the generated completions,
-              plus any additional columns in the dataset. It should return a list of rewards. Custom reward
-              functions can also return None when the reward is not applicable to those samples. This is useful for
-              multi-task training where different reward functions apply to different types of samples. When a
-              reward function returns None for a sample, that reward function is excluded from the reward
-              calculation for that sample. For more details, see
-              [Using a custom reward function](#using-a-custom-reward-function).
-        - A list of reward functions, where each item can independently be any of the above types. Mixing different
-        types within the list (e.g., a string model ID and a custom reward function) is allowed.
-    args ([`GRPOConfig`], *optional*, defaults to `None`):
-        Configuration for this trainer. If `None`, a default configuration is used.
-    train_dataset ([`~datasets.Dataset`] or [`~datasets.IterableDataset`]):
-        Dataset to use for training. It must include a column `"prompt"`. Any additional columns in the dataset is
-        ignored. The format of the samples can be either:
+            - A single reward function, such as:
+                - A string: The *model ID* of a pretrained model hosted inside a model repo on huggingface.co, or a
+                path to a *directory* containing model weights saved using
+                [`~transformers.PreTrainedModel.save_pretrained`], e.g., `'./my_model_directory/'`. The model is loaded
+                using [`~transformers.AutoModelForSequenceClassification.from_pretrained`] with `num_labels=1` and the
+                keyword arguments in `args.model_init_kwargs`.
+                - A [`~transformers.PreTrainedModel`] object: Only sequence classification models are supported.
+                - A custom reward function: The function is provided with the prompts and the generated completions,
+                  plus any additional columns in the dataset. It should return a list of rewards. For more details, see
+                  [Using a custom reward function](#using-a-custom-reward-function).
+            - A list of reward functions, where each item can independently be any of the above types. Mixing different
+            types within the list (e.g., a string model ID and a custom reward function) is allowed.
+        args ([`GRPOConfig`], *optional*, defaults to `None`):
+            Configuration for this trainer. If `None`, a default configuration is used.
+        train_dataset ([`~datasets.Dataset`] or [`~datasets.IterableDataset`]):
+            Dataset to use for training. It must include a column `"prompt"`. Any additional columns in the dataset is
+            ignored. The format of the samples can be either:
 
-        - [Standard](dataset_formats#standard): Each sample contains plain text.
-        - [Conversational](dataset_formats#conversational): Each sample contains structured messages (e.g., role
-          and content).
-    eval_dataset ([`~datasets.Dataset`], [`~datasets.IterableDataset`] or `dict[str, Union[Dataset, IterableDataset]]`):
-        Dataset to use for evaluation. It must meet the same requirements as `train_dataset`.
-    processing_class ([`~transformers.PreTrainedTokenizerBase`], *optional*, defaults to `None`):
-        Processing class used to process the data. The padding side must be set to "left". If `None`, the
-        processing class is loaded from the model's name with [`~transformers.AutoTokenizer.from_pretrained`].
-    reward_processing_classes (`Union[PreTrainedTokenizerBase, list[PreTrainedTokenizerBase]]`, *optional*, defaults to `None`):
-        Processing classes corresponding to the reward functions specified in `reward_funcs`. Can be either:
+            - [Standard](dataset_formats#standard): Each sample contains plain text.
+            - [Conversational](dataset_formats#conversational): Each sample contains structured messages (e.g., role
+              and content).
+        eval_dataset ([`~datasets.Dataset`], [`~datasets.IterableDataset`] or `dict[str, Union[Dataset, IterableDataset]]`):
+            Dataset to use for evaluation. It must meet the same requirements as `train_dataset`.
+        processing_class ([`~transformers.PreTrainedTokenizerBase`], *optional*, defaults to `None`):
+            Processing class used to process the data. The padding side must be set to "left". If `None`, the
+            processing class is loaded from the model's name with [`~transformers.AutoTokenizer.from_pretrained`].
+        reward_processing_classes (`Union[PreTrainedTokenizerBase, list[PreTrainedTokenizerBase]]`, *optional*, defaults to `None`):
+            Processing classes corresponding to the reward functions specified in `reward_funcs`. Can be either:
 
-        - A single processing class: Used when `reward_funcs` contains only one reward function.
-        - A list of processing classes: Must match the order and length of the reward functions in `reward_funcs`.
-        If set to `None`, or if an element of the list corresponding to a [`~transformers.PreTrainedModel`] is
-        `None`, the tokenizer for the model is automatically loaded using [`~transformers.AutoTokenizer.from_pretrained`].
-        For elements in `reward_funcs` that are custom reward functions (not [`~transformers.PreTrainedModel`]),
-        the corresponding entries in `reward_processing_classes` are ignored.
-    callbacks (list of [`~transformers.TrainerCallback`], *optional*, defaults to `None`):
-        List of callbacks to customize the training loop. Will add those to the list of default callbacks
-        detailed in [here](https://huggingface.co/docs/transformers/main_classes/callback).
+            - A single processing class: Used when `reward_funcs` contains only one reward function.
+            - A list of processing classes: Must match the order and length of the reward functions in `reward_funcs`.
+            If set to `None`, or if an element of the list corresponding to a [`~transformers.PreTrainedModel`] is
+            `None`, the tokenizer for the model is automatically loaded using [`~transformers.AutoTokenizer.from_pretrained`].
+            For elements in `reward_funcs` that are custom reward functions (not [`~transformers.PreTrainedModel`]),
+            the corresponding entries in `reward_processing_classes` are ignored.
+        callbacks (list of [`~transformers.TrainerCallback`], *optional*, defaults to `None`):
+            List of callbacks to customize the training loop. Will add those to the list of default callbacks
+            detailed in [here](https://huggingface.co/docs/transformers/main_classes/callback).
 
-        If you want to remove one of the default callbacks used, use the [`~transformers.Trainer.remove_callback`]
-        method.
-    optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`, *optional*, defaults to `(None, None)`):
-        A tuple containing the optimizer and the scheduler to use. Will default to an instance of [`AdamW`] on your
-        model and a scheduler given by [`get_linear_schedule_with_warmup`] controlled by `args`.
-    peft_config ([`~peft.PeftConfig`], *optional*, defaults to `None`):
-        PEFT configuration used to wrap the model. If `None`, the model is not wrapped.
-
+            If you want to remove one of the default callbacks used, use the [`~transformers.Trainer.remove_callback`]
+            method.
+        optimizers (`tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR]`, *optional*, defaults to `(None, None)`):
+            A tuple containing the optimizer and the scheduler to use. Will default to an instance of [`AdamW`] on your
+            model and a scheduler given by [`get_linear_schedule_with_warmup`] controlled by `args`.
+        peft_config ([`~peft.PeftConfig`], *optional*, defaults to `None`):
+            PEFT configuration used to wrap the model. If `None`, the model is not wrapped.
+    
     """
     def __init__(
         self,
@@ -1617,14 +1335,23 @@ Args:
         if args is None: args = UnslothGRPOConfig()
         use_bf16 = getattr(args, 'bf16', False)
         use_fp16 = getattr(args, 'fp16', False)
+        force_float32 = False
+        if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '1':
+            print('Unsloth: Switching to float32 training since model cannot work with float16')
+            force_float32 = True
+        mixed_precision_dtype = os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32')
         dtype = getattr(model.config, 'torch_dtype', None)
         if dtype is None: dtype = model.get_input_embeddings().dtype
         from unsloth_zoo.utils import _get_dtype
         dtype = _get_dtype(dtype)
         float16 = dtype == torch.float16
-        if float16 and use_bf16: raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
-        if not float16 and use_fp16: raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
-        if not use_bf16 and not use_fp16:
+        if not force_float32 and (float16 and use_bf16): raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
+        if not force_float32 and (not float16 and use_fp16): raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
+        if force_float32:
+            args.fp16 = False
+            args.bf16 = False
+            os.environ['ACCELERATE_MIXED_PRECISION'] = 'no'
+        elif (not use_bf16 and not use_fp16) and mixed_precision_dtype == 'float32':
             args.fp16 = float16
             args.bf16 = not float16
             os.environ['ACCELERATE_MIXED_PRECISION'] = 'fp16' if float16 else 'bf16'
@@ -1645,7 +1372,20 @@ Args:
         bf16_full_eval = getattr(args, 'bf16_full_eval', False)
         if args.fp16 and bf16_full_eval: args.bf16_full_eval = False; args.fp16_full_eval = True
         if args.bf16 and fp16_full_eval: args.bf16_full_eval = True; args.fp16_full_eval = False
-        if not bf16_full_eval and not fp16_full_eval: args.bf16_full_eval = args.bf16; args.fp16_full_eval = args.fp16
+        if force_float32:
+            args.bf16_full_eval = False
+            args.fp16_full_eval = False
+        elif os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32') == 'bfloat16':
+            args.bf16_full_eval = True
+            args.fp16_full_eval = False
+        elif not bf16_full_eval and not fp16_full_eval:
+            args.bf16_full_eval = args.bf16
+            args.fp16_full_eval = args.fp16
+        _output_logits = False
+        if locals().get('compute_metrics', None) is not None: _output_logits = True
+        if locals().get('preprocess_logits_for_metrics', None) is not None: _output_logits = True
+        if _output_logits:
+            os.environ['UNSLOTH_RETURN_LOGITS'] = '1'
         if 'max_seq_length' not in locals() and not hasattr(args, 'max_seq_length'):
             pass
         else:

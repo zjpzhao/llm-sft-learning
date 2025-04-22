@@ -1,3 +1,10 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -34,42 +43,42 @@ def selective_log_softmax(logits, index):
 class UnslothPPOConfig(PPOConfig):
     """
     
-Configuration class for the [`PPOTrainer`].
+    Configuration class for the [`PPOTrainer`].
 
-Using [`~transformers.HfArgumentParser`] we can turn this class into
-[argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
-command line.
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
 
-Parameters:
-    exp_name (`str`, *optional*, defaults to `os.path.basename(__file__)[:-3]`):
-        Name of this experiment.
-    reward_model_path (`str`, *optional*, defaults to `"EleutherAI/pythia-160m"`):
-        Path to the reward model.
-    model_adapter_name (`str` or `None`, *optional*, defaults to `None`):
-        Name of the train target PEFT adapter, when using LoRA with multiple adapters.
-    ref_adapter_name (`str` or `None`, *optional*, defaults to `None`):
-        Name of the reference PEFT adapter, when using LoRA with multiple adapters.
-    num_ppo_epochs (`int`, *optional*, defaults to `4`):
-        Number of epochs to train.
-    whiten_rewards (`bool`, *optional*, defaults to `False`):
-        Whether to whiten the rewards.
-    kl_coef (`float`, *optional*, defaults to `0.05`):
-        KL coefficient.
-    cliprange (`float`, *optional*, defaults to `0.2`):
-        Clip range.
-    vf_coef (`float`, *optional*, defaults to `0.1`):
-        Value function coefficient.
-    cliprange_value (`float`, *optional*, defaults to `0.2`):
-        Clip range for the value function.
-    gamma (`float`, *optional*, defaults to `1.0`):
-        Discount factor.
-    lam (`float`, *optional*, defaults to `0.95`):
-        Lambda value for GAE.
-    ds3_gather_for_generation (`bool`, *optional*, defaults to `True`):
-        This setting applies to DeepSpeed ZeRO-3. If enabled, the policy model weights are gathered for generation,
-        improving generation speed. However, disabling this option allows training models that exceed the VRAM
-        capacity of a single GPU, albeit at the cost of slower generation.
-
+    Parameters:
+        exp_name (`str`, *optional*, defaults to `os.path.basename(__file__)[:-3]`):
+            Name of this experiment.
+        reward_model_path (`str`, *optional*, defaults to `"EleutherAI/pythia-160m"`):
+            Path to the reward model.
+        model_adapter_name (`str` or `None`, *optional*, defaults to `None`):
+            Name of the train target PEFT adapter, when using LoRA with multiple adapters.
+        ref_adapter_name (`str` or `None`, *optional*, defaults to `None`):
+            Name of the reference PEFT adapter, when using LoRA with multiple adapters.
+        num_ppo_epochs (`int`, *optional*, defaults to `4`):
+            Number of epochs to train.
+        whiten_rewards (`bool`, *optional*, defaults to `False`):
+            Whether to whiten the rewards.
+        kl_coef (`float`, *optional*, defaults to `0.05`):
+            KL coefficient.
+        cliprange (`float`, *optional*, defaults to `0.2`):
+            Clip range.
+        vf_coef (`float`, *optional*, defaults to `0.1`):
+            Value function coefficient.
+        cliprange_value (`float`, *optional*, defaults to `0.2`):
+            Clip range for the value function.
+        gamma (`float`, *optional*, defaults to `1.0`):
+            Discount factor.
+        lam (`float`, *optional*, defaults to `0.95`):
+            Lambda value for GAE.
+        ds3_gather_for_generation (`bool`, *optional*, defaults to `True`):
+            This setting applies to DeepSpeed ZeRO-3. If enabled, the policy model weights are gathered for generation,
+            improving generation speed. However, disabling this option allows training models that exceed the VRAM
+            capacity of a single GPU, albeit at the cost of slower generation.
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -187,7 +196,6 @@ Parameters:
         include_inputs_for_metrics = False,
         eval_do_concat_batches = True,
         fp16_backend = 'auto',
-        evaluation_strategy = None,
         push_to_hub_model_id = None,
         push_to_hub_organization = None,
         push_to_hub_token = None,
@@ -200,8 +208,6 @@ Parameters:
         torch_compile = False,
         torch_compile_backend = None,
         torch_compile_mode = None,
-        dispatch_batches = None,
-        split_batches = None,
         include_tokens_per_second = False,
         include_num_input_tokens_seen = False,
         neftune_noise_alpha = None,
@@ -362,7 +368,6 @@ Parameters:
             include_inputs_for_metrics = include_inputs_for_metrics,
             eval_do_concat_batches = eval_do_concat_batches,
             fp16_backend = fp16_backend,
-            evaluation_strategy = evaluation_strategy,
             push_to_hub_model_id = push_to_hub_model_id,
             push_to_hub_organization = push_to_hub_organization,
             push_to_hub_token = push_to_hub_token,
@@ -375,8 +380,6 @@ Parameters:
             torch_compile = torch_compile,
             torch_compile_backend = torch_compile_backend,
             torch_compile_mode = torch_compile_mode,
-            dispatch_batches = dispatch_batches,
-            split_batches = split_batches,
             include_tokens_per_second = include_tokens_per_second,
             include_num_input_tokens_seen = include_num_input_tokens_seen,
             neftune_noise_alpha = neftune_noise_alpha,
@@ -524,9 +527,9 @@ class _UnslothPPOTrainer(Trainer):
             args.local_batch_size, args.num_mini_batches, "`local_batch_size` must be a multiple of `num_mini_batches`"
         )
         if args.whiten_rewards:
-            assert args.local_mini_batch_size >= 8, (
-                f"Per-rank minibatch size {args.local_mini_batch_size} is insufficient for whitening"
-            )
+            assert (
+                args.local_mini_batch_size >= 8
+            ), f"Per-rank minibatch size {args.local_mini_batch_size} is insufficient for whitening"
         # `per_rank_rollout_batch_size` is our `args.local_batch_size`
         # `per_rank_minibatch_size` is our `args.local_mini_batch_size`
         args.num_total_batches = math.ceil(
@@ -1141,14 +1144,23 @@ class UnslothPPOTrainer(_UnslothPPOTrainer):
         if args is None: args = UnslothPPOConfig()
         use_bf16 = getattr(args, 'bf16', False)
         use_fp16 = getattr(args, 'fp16', False)
+        force_float32 = False
+        if os.environ.get('UNSLOTH_FORCE_FLOAT32', '0') == '1':
+            print('Unsloth: Switching to float32 training since model cannot work with float16')
+            force_float32 = True
+        mixed_precision_dtype = os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32')
         dtype = getattr(model.config, 'torch_dtype', None)
         if dtype is None: dtype = model.get_input_embeddings().dtype
         from unsloth_zoo.utils import _get_dtype
         dtype = _get_dtype(dtype)
         float16 = dtype == torch.float16
-        if float16 and use_bf16: raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
-        if not float16 and use_fp16: raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
-        if not use_bf16 and not use_fp16:
+        if not force_float32 and (float16 and use_bf16): raise TypeError('Unsloth: Model is in float16 precision but you want to use bfloat16 precision. Set fp16 to `True` and bf16 to `False`')
+        if not force_float32 and (not float16 and use_fp16): raise TypeError('Unsloth: Model is in bfloat16 precision but you want to use float16 precision. Set fp16 to `False` and bf16 to `True`')
+        if force_float32:
+            args.fp16 = False
+            args.bf16 = False
+            os.environ['ACCELERATE_MIXED_PRECISION'] = 'no'
+        elif (not use_bf16 and not use_fp16) and mixed_precision_dtype == 'float32':
             args.fp16 = float16
             args.bf16 = not float16
             os.environ['ACCELERATE_MIXED_PRECISION'] = 'fp16' if float16 else 'bf16'
@@ -1169,7 +1181,20 @@ class UnslothPPOTrainer(_UnslothPPOTrainer):
         bf16_full_eval = getattr(args, 'bf16_full_eval', False)
         if args.fp16 and bf16_full_eval: args.bf16_full_eval = False; args.fp16_full_eval = True
         if args.bf16 and fp16_full_eval: args.bf16_full_eval = True; args.fp16_full_eval = False
-        if not bf16_full_eval and not fp16_full_eval: args.bf16_full_eval = args.bf16; args.fp16_full_eval = args.fp16
+        if force_float32:
+            args.bf16_full_eval = False
+            args.fp16_full_eval = False
+        elif os.environ.get('UNSLOTH_MIXED_PRECISION', 'float32') == 'bfloat16':
+            args.bf16_full_eval = True
+            args.fp16_full_eval = False
+        elif not bf16_full_eval and not fp16_full_eval:
+            args.bf16_full_eval = args.bf16
+            args.fp16_full_eval = args.fp16
+        _output_logits = False
+        if locals().get('compute_metrics', None) is not None: _output_logits = True
+        if locals().get('preprocess_logits_for_metrics', None) is not None: _output_logits = True
+        if _output_logits:
+            os.environ['UNSLOTH_RETURN_LOGITS'] = '1'
         if 'max_seq_length' not in locals() and not hasattr(args, 'max_seq_length'):
             pass
         else:
@@ -1184,6 +1209,23 @@ class UnslothPPOTrainer(_UnslothPPOTrainer):
         if 'processing_class' in locals():
             if hasattr(processing_class, 'padding_side'): processing_class.padding_side = 'right'
             if hasattr(processing_class, 'tokenizer') and hasattr(processing_class.tokenizer, 'padding_side'): processing_class.tokenizer.padding_side = 'right'
+        __tokenizer = processing_class if 'processing_class' in locals() else tokenizer
+        from unsloth_zoo.vision_utils import UnslothVisionDataCollator
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if isinstance(data_collator, DataCollatorForSeq2Seq) and 'labels' not in train_dataset.column_names:
+                data_collator = DataCollatorForLanguageModeling(__tokenizer, mlm = False)
+            elif isinstance(data_collator, DataCollatorForLanguageModeling) and 'labels' in train_dataset.column_names:
+                data_collator = DataCollatorForSeq2Seq(__tokenizer)
+        else:
+            if hasattr(args, 'remove_unused_columns'): args.remove_unused_columns = False
+            if hasattr(args, 'dataset_text_field'): args.dataset_text_field = ''
+            if hasattr(args, 'dataset_kwargs'): args.dataset_kwargs = {'skip_prepare_dataset': True}
+        if not isinstance(data_collator, UnslothVisionDataCollator):
+            if not hasattr(__tokenizer, 'pad') and hasattr(__tokenizer, 'tokenizer'):
+                if isinstance(data_collator, DataCollatorForSeq2Seq):
+                    data_collator = DataCollatorForSeq2Seq(__tokenizer.tokenizer)
+                else:
+                    data_collator = DataCollatorForLanguageModeling(__tokenizer.tokenizer, mlm = False)
         other_metrics = []
         
         from unsloth_zoo.logging_utils import PatchRLStatistics

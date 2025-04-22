@@ -1,3 +1,10 @@
+"""
+2025.3.17
+2025.3.19
+4.51.3
+0.15.2
+__UNSLOTH_VERSIONING__
+"""
 from torch import Tensor
 import torch
 import torch.nn as nn
@@ -13,6 +20,8 @@ import torch
 import numpy as np
 from contextlib import nullcontext
 from torch.nn import functional as F
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
+
 torch_compile_options = {
     "epilogue_fusion"   : True,
     "max_autotune"      : False,
@@ -34,81 +43,81 @@ def selective_log_softmax(logits, index):
 class UnslothAlignPropConfig(AlignPropConfig):
     """
     
-Configuration class for the [`AlignPropTrainer`].
+    Configuration class for the [`AlignPropTrainer`].
 
-Using [`~transformers.HfArgumentParser`] we can turn this class into
-[argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
-command line.
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
 
-Parameters:
-    exp_name (`str`, *optional*, defaults to `os.path.basename(sys.argv[0])[: -len(".py")]`):
-        Name of this experiment (defaults to the file name without the extension).
-    run_name (`str`, *optional*, defaults to `""`):
-        Name of this run.
-    seed (`int`, *optional*, defaults to `0`):
-        Random seed for reproducibility.
-    log_with (`str` or `None`, *optional*, defaults to `None`):
-        Log with either `"wandb"` or `"tensorboard"`. Check
-        [tracking](https://huggingface.co/docs/accelerate/usage_guides/tracking) for more details.
-    log_image_freq (`int`, *optional*, defaults to `1`):
-        Frequency for logging images.
-    tracker_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
-        Keyword arguments for the tracker (e.g., `wandb_project`).
-    accelerator_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
-        Keyword arguments for the accelerator.
-    project_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
-        Keyword arguments for the accelerator project config (e.g., `logging_dir`).
-    tracker_project_name (`str`, *optional*, defaults to `"trl"`):
-        Name of project to use for tracking.
-    logdir (`str`, *optional*, defaults to `"logs"`):
-        Top-level logging directory for checkpoint saving.
-    num_epochs (`int`, *optional*, defaults to `100`):
-        Number of epochs to train.
-    save_freq (`int`, *optional*, defaults to `1`):
-        Number of epochs between saving model checkpoints.
-    num_checkpoint_limit (`int`, *optional*, defaults to `5`):
-        Number of checkpoints to keep before overwriting old ones.
-    mixed_precision (`str`, *optional*, defaults to `"fp16"`):
-        Mixed precision training.
-    allow_tf32 (`bool`, *optional*, defaults to `True`):
-        Allow `tf32` on Ampere GPUs.
-    resume_from (`str`, *optional*, defaults to `""`):
-        Path to resume training from a checkpoint.
-    sample_num_steps (`int`, *optional*, defaults to `50`):
-        Number of sampler inference steps.
-    sample_eta (`float`, *optional*, defaults to `1.0`):
-        Eta parameter for the DDIM sampler.
-    sample_guidance_scale (`float`, *optional*, defaults to `5.0`):
-        Classifier-free guidance weight.
-    train_batch_size (`int`, *optional*, defaults to `1`):
-        Batch size for training.
-    train_use_8bit_adam (`bool`, *optional*, defaults to `False`):
-        Whether to use the 8bit Adam optimizer from `bitsandbytes`.
-    train_learning_rate (`float`, *optional*, defaults to `1e-3`):
-        Learning rate.
-    train_adam_beta1 (`float`, *optional*, defaults to `0.9`):
-        Beta1 for Adam optimizer.
-    train_adam_beta2 (`float`, *optional*, defaults to `0.999`):
-        Beta2 for Adam optimizer.
-    train_adam_weight_decay (`float`, *optional*, defaults to `1e-4`):
-        Weight decay for Adam optimizer.
-    train_adam_epsilon (`float`, *optional*, defaults to `1e-8`):
-        Epsilon value for Adam optimizer.
-    train_gradient_accumulation_steps (`int`, *optional*, defaults to `1`):
-        Number of gradient accumulation steps.
-    train_max_grad_norm (`float`, *optional*, defaults to `1.0`):
-        Maximum gradient norm for gradient clipping.
-    negative_prompts (`str` or `None`, *optional*, defaults to `None`):
-        Comma-separated list of prompts to use as negative examples.
-    truncated_backprop_rand (`bool`, *optional*, defaults to `True`):
-        If `True`, randomized truncation to different diffusion timesteps is used.
-    truncated_backprop_timestep (`int`, *optional*, defaults to `49`):
-        Absolute timestep to which the gradients are backpropagated. Used only if `truncated_backprop_rand=False`.
-    truncated_rand_backprop_minmax (`tuple[int, int]`, *optional*, defaults to `(0, 50)`):
-        Range of diffusion timesteps for randomized truncated backpropagation.
-    push_to_hub (`bool`, *optional*, defaults to `False`):
-        Whether to push the final model to the Hub.
-
+    Parameters:
+        exp_name (`str`, *optional*, defaults to `os.path.basename(sys.argv[0])[: -len(".py")]`):
+            Name of this experiment (defaults to the file name without the extension).
+        run_name (`str`, *optional*, defaults to `""`):
+            Name of this run.
+        seed (`int`, *optional*, defaults to `0`):
+            Random seed for reproducibility.
+        log_with (`str` or `None`, *optional*, defaults to `None`):
+            Log with either `"wandb"` or `"tensorboard"`. Check
+            [tracking](https://huggingface.co/docs/accelerate/usage_guides/tracking) for more details.
+        log_image_freq (`int`, *optional*, defaults to `1`):
+            Frequency for logging images.
+        tracker_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
+            Keyword arguments for the tracker (e.g., `wandb_project`).
+        accelerator_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
+            Keyword arguments for the accelerator.
+        project_kwargs (`dict[str, Any]`, *optional*, defaults to `{}`):
+            Keyword arguments for the accelerator project config (e.g., `logging_dir`).
+        tracker_project_name (`str`, *optional*, defaults to `"trl"`):
+            Name of project to use for tracking.
+        logdir (`str`, *optional*, defaults to `"logs"`):
+            Top-level logging directory for checkpoint saving.
+        num_epochs (`int`, *optional*, defaults to `100`):
+            Number of epochs to train.
+        save_freq (`int`, *optional*, defaults to `1`):
+            Number of epochs between saving model checkpoints.
+        num_checkpoint_limit (`int`, *optional*, defaults to `5`):
+            Number of checkpoints to keep before overwriting old ones.
+        mixed_precision (`str`, *optional*, defaults to `"fp16"`):
+            Mixed precision training.
+        allow_tf32 (`bool`, *optional*, defaults to `True`):
+            Allow `tf32` on Ampere GPUs.
+        resume_from (`str`, *optional*, defaults to `""`):
+            Path to resume training from a checkpoint.
+        sample_num_steps (`int`, *optional*, defaults to `50`):
+            Number of sampler inference steps.
+        sample_eta (`float`, *optional*, defaults to `1.0`):
+            Eta parameter for the DDIM sampler.
+        sample_guidance_scale (`float`, *optional*, defaults to `5.0`):
+            Classifier-free guidance weight.
+        train_batch_size (`int`, *optional*, defaults to `1`):
+            Batch size for training.
+        train_use_8bit_adam (`bool`, *optional*, defaults to `False`):
+            Whether to use the 8bit Adam optimizer from `bitsandbytes`.
+        train_learning_rate (`float`, *optional*, defaults to `1e-3`):
+            Learning rate.
+        train_adam_beta1 (`float`, *optional*, defaults to `0.9`):
+            Beta1 for Adam optimizer.
+        train_adam_beta2 (`float`, *optional*, defaults to `0.999`):
+            Beta2 for Adam optimizer.
+        train_adam_weight_decay (`float`, *optional*, defaults to `1e-4`):
+            Weight decay for Adam optimizer.
+        train_adam_epsilon (`float`, *optional*, defaults to `1e-8`):
+            Epsilon value for Adam optimizer.
+        train_gradient_accumulation_steps (`int`, *optional*, defaults to `1`):
+            Number of gradient accumulation steps.
+        train_max_grad_norm (`float`, *optional*, defaults to `1.0`):
+            Maximum gradient norm for gradient clipping.
+        negative_prompts (`str` or `None`, *optional*, defaults to `None`):
+            Comma-separated list of prompts to use as negative examples.
+        truncated_backprop_rand (`bool`, *optional*, defaults to `True`):
+            If `True`, randomized truncation to different diffusion timesteps is used.
+        truncated_backprop_timestep (`int`, *optional*, defaults to `49`):
+            Absolute timestep to which the gradients are backpropagated. Used only if `truncated_backprop_rand=False`.
+        truncated_rand_backprop_minmax (`tuple[int, int]`, *optional*, defaults to `(0, 50)`):
+            Range of diffusion timesteps for randomized truncated backpropagation.
+        push_to_hub (`bool`, *optional*, defaults to `False`):
+            Whether to push the final model to the Hub.
+    
     """
     vllm_sampling_params: Optional[Any] = field(
         default = None,
@@ -189,23 +198,7 @@ Parameters:
 pass
 
 class _UnslothAlignPropTrainer(PyTorchModelHubMixin):
-    """
-    The AlignPropTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
-    Note, this trainer is heavily inspired by the work here: https://github.com/mihirp1998/AlignProp/
-    As of now only Stable Diffusion based pipelines are supported
-
-    Attributes:
-        config (`AlignPropConfig`):
-            Configuration object for AlignPropTrainer. Check the documentation of `PPOConfig` for more details.
-        reward_function (`Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]`):
-            Reward function to be used
-        prompt_function (`Callable[[], tuple[str, Any]]`):
-            Function to generate prompts to guide model
-        sd_pipeline (`DDPOStableDiffusionPipeline`):
-            Stable Diffusion pipeline to be used for training.
-        image_samples_hook (`Optional[Callable[[Any, Any, Any], Any]]`):
-            Hook to be called to log images
-    """
+    """"""
 
     _tag_names = ["trl", "alignprop"]
 
@@ -602,22 +595,22 @@ class _UnslothAlignPropTrainer(PyTorchModelHubMixin):
 class UnslothAlignPropTrainer(_UnslothAlignPropTrainer):
     """
     
-The AlignPropTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
-Note, this trainer is heavily inspired by the work here: https://github.com/mihirp1998/AlignProp/
-As of now only Stable Diffusion based pipelines are supported
+    The AlignPropTrainer uses Deep Diffusion Policy Optimization to optimise diffusion models.
+    Note, this trainer is heavily inspired by the work here: https://github.com/mihirp1998/AlignProp/
+    As of now only Stable Diffusion based pipelines are supported
 
-Attributes:
-    config (`AlignPropConfig`):
-        Configuration object for AlignPropTrainer. Check the documentation of `PPOConfig` for more details.
-    reward_function (`Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]`):
-        Reward function to be used
-    prompt_function (`Callable[[], tuple[str, Any]]`):
-        Function to generate prompts to guide model
-    sd_pipeline (`DDPOStableDiffusionPipeline`):
-        Stable Diffusion pipeline to be used for training.
-    image_samples_hook (`Optional[Callable[[Any, Any, Any], Any]]`):
-        Hook to be called to log images
-
+    Attributes:
+        config (`AlignPropConfig`):
+            Configuration object for AlignPropTrainer. Check the documentation of `PPOConfig` for more details.
+        reward_function (`Callable[[torch.Tensor, tuple[str], tuple[Any]], torch.Tensor]`):
+            Reward function to be used
+        prompt_function (`Callable[[], tuple[str, Any]]`):
+            Function to generate prompts to guide model
+        sd_pipeline (`DDPOStableDiffusionPipeline`):
+            Stable Diffusion pipeline to be used for training.
+        image_samples_hook (`Optional[Callable[[Any, Any, Any], Any]]`):
+            Hook to be called to log images
+    
     """
     def __init__(
         self,
